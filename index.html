@@ -1,0 +1,4454 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎀 PINK PUDDING MULTI DIARY CLUB 🎀</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Gaegu:wght@400;700&family=Yomogi&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎀</text></svg>">
+
+    <!-- OG / SNS 공유 태그 -->
+    <meta property="og:title"       content="🎀 PINK PUDDING STUDY CLUB">
+    <meta property="og:description" content="귀여운 핑크 감성 멀티 스터디룸 🌸">
+    <meta property="og:type"        content="website">
+    <meta name="description"        content="귀여운 핑크 감성 멀티 스터디룸. 친구들과 함께 공부해요 🌸">
+    <meta name="theme-color"        content="#f472b6">
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --pink:        #f472b6;
+            --pink-light:  #fce7f3;
+            --pink-mid:    #fbcfe8;
+            --pink-dark:   #db2777;
+            --pink-deep:   #9d174d;
+            --surface:     rgba(255,255,255,0.82);
+            --surface-2:   rgba(255,255,255,0.55);
+            --border:      rgba(244,114,182,0.25);
+            --border-focus:rgba(219,39,119,0.5);
+            --text:        #1e1e2e;
+            --text-muted:  #6b7280;
+            --bg-color:    #fdf2f8;
+            --shadow-sm:   0 2px 8px rgba(244,114,182,0.12);
+            --shadow-md:   0 8px 32px rgba(219,39,119,0.10), 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-lg:   0 16px 48px rgba(219,39,119,0.12), 0 4px 16px rgba(0,0,0,0.08);
+            --radius:      16px;
+            --radius-sm:   10px;
+            --radius-lg:   22px;
+            /* 하위호환 */
+            --gui-pink:      var(--pink);
+            --gui-dark-pink: var(--pink-dark);
+            --gui-bubble:    var(--pink-light);
+            --text-main:     var(--text);
+            --round-border:  1px solid var(--border);
+            --pattern-color: rgba(244,114,182,0.18);
+        }
+
+        * { box-sizing: border-box; margin:0; padding:0; }
+
+        body, input, textarea, button, select {
+            font-family: 'Gaegu', 'Fredoka', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        body {
+            background: var(--bg-color);
+            width: 100vw; height: 100vh;
+            overflow: hidden; position: relative;
+        }
+
+        #patternCanvas {
+            position: fixed; top:0; left:0;
+            width:100%; height:100%;
+            pointer-events:none; z-index:0;
+        }
+
+        /* ── 창 ── */
+        .window {
+            background: var(--surface);
+            backdrop-filter: blur(20px) saturate(1.4);
+            -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            display: flex; flex-direction: column;
+            position: absolute; z-index: 10;
+            transition: box-shadow .2s;
+        }
+        .window:hover { box-shadow: var(--shadow-lg); }
+        .resizable-window { resize: both; overflow: hidden; }
+
+        .title-bar {
+            background: linear-gradient(135deg, var(--pink) 0%, var(--pink-dark) 100%);
+            color: white;
+            padding: 10px 14px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: move; user-select: none; flex-shrink: 0;
+            text-shadow: none;
+        }
+
+        .dots { display: flex; gap: 6px; align-items:center; }
+        .dots span {
+            width: 12px; height: 12px; border-radius: 50%;
+            display: inline-block; cursor:pointer;
+            transition: opacity .15s;
+        }
+        .dots span:hover { opacity: 0.75; }
+        .d-r { background: #ff5f57; }
+        .d-y { background: #febc2e; }
+        .d-g { background: #28c840; }
+
+        .window-body {
+            padding: 14px; display: flex; flex-direction: column;
+            gap: 10px; flex-grow: 1; overflow-y: auto;
+        }
+
+        input[type="text"], textarea, select {
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 7px 12px;
+            background: rgba(255,255,255,0.9);
+            color: var(--text);
+            font-size: 0.88rem;
+            width: 100%; outline: none;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 3px rgba(244,114,182,0.15);
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.84rem; font-weight: 700;
+            background: linear-gradient(135deg, var(--pink), var(--pink-dark));
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 7px 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(219,39,119,0.25);
+            text-shadow: none;
+            transition: all .15s;
+            letter-spacing: 0.3px;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(219,39,119,0.3); }
+        button:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(219,39,119,0.2); }
+
+        .btn-green  { background: linear-gradient(135deg,#34d399,#059669) !important; box-shadow:0 2px 8px rgba(5,150,105,0.3) !important; }
+        .btn-yellow { background: linear-gradient(135deg,#fbbf24,#d97706) !important; box-shadow:0 2px 8px rgba(217,119,6,0.3) !important; }
+        .btn-red    { background: linear-gradient(135deg,#f87171,#dc2626) !important; box-shadow:0 2px 8px rgba(220,38,38,0.3) !important; }
+        .btn-mint   { background: linear-gradient(135deg,#6ee7b7,#10b981) !important; box-shadow:0 2px 8px rgba(16,185,129,0.3) !important; }
+
+        .timer-screen {
+            font-size: 2.8rem; text-align: center;
+            background: linear-gradient(135deg, var(--pink-light), var(--pink-mid));
+            color: var(--pink-deep);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 0;
+            letter-spacing: 4px;
+            font-weight: 700;
+        }
+
+        .list-box, .chat-box {
+            border: 1.5px solid var(--border);
+            background: rgba(255,255,255,0.7);
+            border-radius: var(--radius);
+            padding: 10px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 6px; flex-grow: 1;
+        }
+
+        .user-card {
+            background: var(--pink-light);
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 4px;
+        }
+
+        .chat-line {
+            font-size: 0.88rem;
+            padding: 4px 6px;
+            border-radius: 8px;
+            border-bottom: none;
+        }
+        .chat-line:hover { background: var(--pink-light); }
+        .chat-user { color: var(--pink-dark); font-weight: 700; }
+
+        .memo-pad {
+            width: 100%; flex-grow: 1;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            background: rgba(255,255,255,0.8);
+            resize: none; outline: none; line-height: 1.75;
+            font-size: 0.9rem;
+            transition: border-color .15s;
+        }
+        .memo-pad:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(244,114,182,0.12); }
+
+        .profile-frame {
+            width: 88px; height: 88px; margin: 0 auto;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            background: var(--pink-light); overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 16px rgba(244,114,182,0.2);
+            cursor: pointer; transition: transform .15s, box-shadow .15s;
+        }
+        .profile-frame:hover { transform: scale(1.05); box-shadow: 0 8px 24px rgba(244,114,182,0.3); }
+        .profile-frame img { width:100%; height:100%; object-fit:cover; }
+
+        .section-label {
+            font-size: 0.72rem; font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.8px;
+        }
+
+        .room-panel {
+            background: linear-gradient(135deg, var(--pink-light), var(--pink-mid));
+            border: 1.5px solid var(--border);
+            padding: 10px; border-radius: var(--radius);
+            display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+        }
+
+        .tab-btn {
+            flex:1; font-size:0.8rem; padding:6px 8px;
+            border-radius: var(--radius-sm);
+            border: none; transition: all .15s;
+        }
+        .tab-on  {
+            background: linear-gradient(135deg, var(--pink), var(--pink-dark)) !important;
+            color: white !important; box-shadow: 0 2px 8px rgba(219,39,119,0.25) !important;
+        }
+        .tab-off {
+            background: rgba(0,0,0,0.05) !important;
+            color: var(--text-muted) !important;
+            box-shadow: none !important;
+        }
+
+        #videoContainer {
+            flex:1; background:#0f0f0f; border-radius:var(--radius); overflow:hidden;
+            display:flex; align-items:center; justify-content:center;
+            position:relative; min-height:140px;
+        }
+        #videoContainer iframe { width:100%; height:100%; border:none; display:block; }
+        #videoPlaceholder { color:#555; font-size:0.88rem; text-align:center; line-height:2; }
+
+        .sticker {
+            position:absolute; cursor:move; z-index:50;
+            padding:6px; background:rgba(255,255,255,0.9);
+            border:1.5px solid var(--border); border-radius:var(--radius-sm);
+            backdrop-filter: blur(8px);
+            display:flex; flex-direction:column; align-items:center;
+        }
+        .sticker img { width:100%; object-fit:contain; pointer-events:none; }
+        .sticker-del {
+            position:absolute; top:-8px; right:-8px;
+            background: var(--pink-dark); color:white; border:none;
+            border-radius:50%; width:20px; height:20px;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; font-size:0.7rem; box-shadow: var(--shadow-sm);
+        }
+
+        .lang-bar {
+            position:fixed; top:14px; right:18px; z-index:200;
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            padding: 6px 12px; border-radius: 40px;
+            display:flex; gap:8px; align-items:center;
+            box-shadow: var(--shadow-sm); font-size:0.84rem;
+        }
+
+        .pattern-panel {
+            background: rgba(255,255,255,0.6);
+            border: 1.5px solid var(--border);
+            padding:10px; border-radius:var(--radius);
+            display:flex; flex-direction:column; gap:8px;
+        }
+        .pattern-btns { display:flex; gap:6px; flex-wrap:wrap; }
+        .pat-btn {
+            font-size:1rem; padding:5px 10px;
+            border-radius:var(--radius-sm);
+            border: 1.5px solid var(--border);
+            background:rgba(255,255,255,0.8);
+            color: var(--text);
+            box-shadow: var(--shadow-sm);
+            cursor:pointer; text-shadow:none;
+            transition: all .15s;
+        }
+        .pat-btn.selected, .pat-btn:hover {
+            background: var(--pink-light);
+            border-color: var(--pink);
+        }
+        .color-row { display:flex; gap:8px; align-items:center; font-size:0.78rem; }
+        .color-row label { white-space:nowrap; color:var(--text-muted); font-weight:700; }
+
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--pink); }
+
+        /* 리액션 이모지 */
+        .floating-emoji {
+            position:fixed; font-size:2rem; pointer-events:none; z-index:9999;
+            animation: floatUp 3s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0%   { opacity:1; transform:translateY(0) scale(1); }
+            80%  { opacity:0.6; }
+            100% { opacity:0; transform:translateY(-300px) scale(1.4); }
+        }
+        .confetti-piece {
+            position:fixed; width:8px; height:8px; border-radius:2px; pointer-events:none; z-index:9999;
+            animation: confettiFall 2.5s ease-in forwards;
+        }
+        @keyframes confettiFall {
+            0%   { opacity:1; transform:translateY(-20px) rotate(0deg); }
+            100% { opacity:0; transform:translateY(100vh) rotate(720deg); }
+        }
+        #goalBanner {
+            display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+            background: var(--surface);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: 24px; padding:32px 44px; text-align:center; z-index:10000;
+            box-shadow: var(--shadow-lg), 0 0 0 1px rgba(244,114,182,0.1);
+            animation: popIn 0.35s cubic-bezier(.175,.885,.32,1.275);
+        }
+        @keyframes popIn { from{transform:translate(-50%,-50%) scale(0.88);opacity:0} to{transform:translate(-50%,-50%) scale(1);opacity:1} }
+        #pomoBadge {
+            font-size:0.7rem; padding:2px 10px; border-radius:20px;
+            font-weight:700; display:inline-block; margin-left:6px;
+        }
+        .pomo-work  { background: linear-gradient(135deg,var(--pink),var(--pink-dark)); color:white; }
+        .pomo-break { background: linear-gradient(135deg,#34d399,#059669); color:white; }
+        .stat-bar-wrap { display:flex; align-items:center; gap:8px; font-size:0.78rem; margin-bottom:5px; }
+        .stat-bar-bg { flex:1; background:var(--pink-light); border-radius:20px; height:10px; overflow:hidden; }
+        .stat-bar-fill { height:100%; background:linear-gradient(90deg,var(--pink),var(--pink-dark)); border-radius:20px; transition:width 0.8s ease; }
+        #noticeBanner {
+            display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%);
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(251,191,36,0.4);
+            border-radius: 40px;
+            padding:8px 24px; font-size:0.84rem; z-index:500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width:600px; text-align:center; white-space:nowrap;
+        }
+        .reaction-bar { display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; }
+        .reaction-btn {
+            font-size:1.2rem; padding:4px 9px; border-radius:var(--radius-sm); cursor:pointer;
+            background:rgba(255,255,255,0.7); border:1px solid var(--border);
+            box-shadow: var(--shadow-sm); transition:all .12s;
+        }
+        .reaction-btn:hover { background:var(--pink-light); transform:scale(1.08); }
+        .reaction-btn:active { transform:scale(0.92); }
+
+        /* ── 테마 스킨 ── */
+        body.theme-dark {
+            --pink:#a78bfa; --pink-light:#1e1b4b; --pink-mid:#2e2a5e;
+            --pink-dark:#7c3aed; --pink-deep:#4c1d95;
+            --surface:rgba(30,27,75,0.85); --surface-2:rgba(30,27,75,0.5);
+            --border:rgba(167,139,250,0.2); --text:#e2e8f0; --text-muted:#94a3b8;
+            --bg-color:#0f0e1a;
+            --gui-pink:#a78bfa; --gui-dark-pink:#7c3aed; --gui-bubble:#1e1b4b; --text-main:#e2e8f0;
+        }
+        body.theme-dark .window { background:rgba(20,18,50,0.88); }
+        body.theme-dark input[type="text"],body.theme-dark textarea,body.theme-dark select {
+            background:rgba(30,27,75,0.8); color:#e2e8f0;
+        }
+        body.theme-mint {
+            --pink:#34d399; --pink-light:#ecfdf5; --pink-mid:#d1fae5;
+            --pink-dark:#059669; --pink-deep:#064e3b;
+            --border:rgba(52,211,153,0.25); --bg-color:#f0fdf4;
+            --gui-pink:#34d399; --gui-dark-pink:#059669; --gui-bubble:#ecfdf5; --text-main:#064e3b;
+        }
+        body.theme-lavender {
+            --pink:#c084fc; --pink-light:#faf5ff; --pink-mid:#f3e8ff;
+            --pink-dark:#9333ea; --pink-deep:#581c87;
+            --border:rgba(192,132,252,0.25); --bg-color:#faf5ff;
+            --gui-pink:#c084fc; --gui-dark-pink:#9333ea; --gui-bubble:#faf5ff; --text-main:#581c87;
+        }
+        body.theme-sky {
+            --pink:#38bdf8; --pink-light:#f0f9ff; --pink-mid:#e0f2fe;
+            --pink-dark:#0284c7; --pink-deep:#0c4a6e;
+            --border:rgba(56,189,248,0.25); --bg-color:#f0f9ff;
+            --gui-pink:#38bdf8; --gui-dark-pink:#0284c7; --gui-bubble:#f0f9ff; --text-main:#0c4a6e;
+        }
+
+        /* ── 집중 모드 ── */
+        #focusOverlay {
+            display:none; position:fixed; inset:0;
+            background: rgba(15,10,30,0.95);
+            backdrop-filter: blur(8px);
+            z-index:5000; align-items:center; justify-content:center; flex-direction:column; gap:16px;
+        }
+        #focusOverlay.active { display:flex; }
+        #focusTimerBig {
+            font-size:5.5rem; color:#fff; letter-spacing:8px;
+            font-family:'Gaegu',sans-serif;
+            text-shadow: 0 0 40px var(--pink), 0 0 80px rgba(244,114,182,0.3);
+        }
+        #focusSubject { font-size:1rem; color:rgba(255,255,255,0.45); letter-spacing:2px; }
+        #focusExitBtn {
+            margin-top:24px; font-size:0.84rem; padding:10px 28px;
+            background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.15); border-radius:40px; cursor:pointer;
+            transition: all .15s; backdrop-filter:blur(8px);
+        }
+        #focusExitBtn:hover { background:rgba(255,255,255,0.15); color:white; }
+
+        
+
+
+        /* ── 사이드바 ── */
+        #appSidebar {
+            position: fixed; left: 0; top: 0; bottom: 0; width: 60px;
+            background: rgba(255,255,255,0.75);
+            backdrop-filter: blur(24px) saturate(1.6);
+            -webkit-backdrop-filter: blur(24px) saturate(1.6);
+            border-right: 1px solid rgba(244,114,182,0.15);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 14px 8px; gap: 2px; z-index: 400;
+            transition: width 0.28s cubic-bezier(.4,0,.2,1);
+            overflow: hidden;
+            box-shadow: 4px 0 24px rgba(219,39,119,0.06);
+        }
+        #appSidebar.open { width: 210px; align-items: flex-start; padding: 14px 10px; }
+
+        #sidebarToggle {
+            width: 40px; height: 40px; border-radius: 14px; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--pink) 0%, var(--pink-dark) 100%);
+            border: none; color: white;
+            cursor: pointer; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(219,39,119,0.35);
+            transition: all .18s; align-self: center;
+        }
+        #sidebarToggle:hover { box-shadow: 0 6px 18px rgba(219,39,119,0.45); transform: scale(1.04); }
+
+        .sb-sep {
+            width: 32px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            flex-shrink: 0; margin: 5px 0; align-self: center;
+        }
+        #appSidebar.open .sb-sep { width: 100%; }
+
+        .sb-group-label {
+            display: none;
+            font-size: 0.6rem; font-weight: 800;
+            color: var(--text-muted);
+            letter-spacing: 1.2px; text-transform: uppercase;
+            padding: 6px 8px 2px; width: 100%;
+        }
+        #appSidebar.open .sb-group-label { display: block; }
+
+        .sb-btn {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: transparent; border: none;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 0;
+            transition: all .15s; white-space: nowrap;
+            overflow: hidden; color: var(--text);
+            flex-shrink: 0; position: relative;
+            align-self: center;
+        }
+        #appSidebar.open .sb-btn {
+            width: 100%; justify-content: flex-start;
+            padding: 0 10px; gap: 10px; align-self: auto;
+        }
+        .sb-btn:hover { background: var(--pink-light); }
+        .sb-btn.sb-hidden { opacity: 0.28; }
+        .sb-btn.sb-hidden:hover { opacity: 0.5; }
+
+        .sb-icon { font-size: 1.05rem; flex-shrink: 0; line-height: 1; }
+        .sb-label {
+            display: none; font-size: 0.82rem; font-weight: 700;
+            color: var(--text); letter-spacing: 0.1px;
+        }
+        #appSidebar.open .sb-label { display: block; }
+
+        /* 활성 창 버튼 강조 */
+        .sb-btn.sb-active {
+            background: var(--pink-light) !important;
+            color: var(--pink-dark) !important;
+            font-weight: 800 !important;
+        }
+        .sb-btn.sb-active .sb-icon { filter: saturate(1.5); }
+        .sb-btn::after {
+            content: '';
+            position: absolute; left: 0; top: 25%; bottom: 25%;
+            width: 3px; background: transparent; border-radius: 0 3px 3px 0;
+            transition: background .15s;
+        }
+        .sb-btn.sb-active::after { background: var(--pink-dark); }
+
+        .sb-action { opacity: 0.7; }
+        .sb-action:hover { opacity: 1; }
+
+        #windowMenu { display: none !important; }
+        .menu-win-btn { display: none; }
+
+        
+
+
+        /* ── 웰컴 화면 ── */
+        #welcomeOverlay {
+            position:fixed; inset:0; z-index:9999;
+            background: var(--bg-color);
+            display:flex; align-items:center; justify-content:center;
+        }
+        #welcomeOverlay.hidden { display:none; }
+        .welcome-box {
+            background: var(--surface);
+            backdrop-filter: blur(24px) saturate(1.5);
+            -webkit-backdrop-filter: blur(24px) saturate(1.5);
+            border: 1px solid var(--border);
+            border-radius: 28px; padding:44px 48px;
+            text-align:center;
+            box-shadow: var(--shadow-lg), 0 0 0 1px rgba(244,114,182,0.08);
+            display:flex; flex-direction:column; gap:18px; min-width:340px;
+        }
+        .welcome-cat { font-size:3.5rem; animation:floatBounce 2s ease-in-out infinite alternate; }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 60%{transform:translateX(8px)} 80%{transform:translateX(-4px)}
+        }
+        @keyframes floatBounce { from{transform:translateY(0)} to{transform:translateY(-10px)} }
+        .welcome-title { font-size:1.5rem; font-weight:700; color:var(--pink-dark); }
+        .welcome-sub   { font-size:0.88rem; color:var(--text-muted); }
+        .welcome-input {
+            border: 1.5px solid var(--border); border-radius: var(--radius);
+            padding:11px 16px; font-size:1rem; text-align:center;
+            font-family:inherit; font-weight:700; color:var(--text);
+            background: rgba(255,255,255,0.8);
+            outline:none; transition:all .15s;
+        }
+        .welcome-input:focus { border-color:var(--pink); box-shadow:0 0 0 3px rgba(244,114,182,0.15); }
+        .welcome-btn {
+            padding:12px; border-radius:var(--radius); font-size:0.95rem; font-weight:700;
+            background: linear-gradient(135deg, var(--pink), var(--pink-dark));
+            border:none; color:white;
+            cursor:pointer;
+            box-shadow: 0 4px 16px rgba(219,39,119,0.3);
+            font-family:inherit;
+            transition:all .15s;
+        }
+        .welcome-btn:hover { opacity:0.9; transform:translateY(-1px); box-shadow:0 6px 20px rgba(219,39,119,0.35); }
+        .welcome-hint { font-size:0.75rem; color:var(--text-muted); }
+
+
+        
+
+        .room-scene-btn-disabled {
+            border-radius:var(--radius-sm); border:1.5px solid var(--border);
+            background:rgba(255,255,255,0.7); cursor:pointer;
+            transition:all .15s; color:var(--text);
+        }
+        .room-scene-btn-disabled:hover { background:var(--pink-light); border-color:var(--pink); }
+        .room-scene-btn-disabled.selected { background:var(--pink-light); border-color:var(--pink-dark); color:var(--pink-dark); font-weight:700; }
+
+        /* ── BGM ── */
+        .bgm-btn {
+            border-radius:var(--radius-sm); border:1.5px solid var(--border);
+            background:rgba(255,255,255,0.7); cursor:pointer;
+            transition:all .15s; color:var(--text);
+        }
+        .bgm-btn:hover { background:var(--pink-light); }
+        .bgm-btn.playing { background:var(--pink-light); border-color:var(--pink-dark); color:var(--pink-dark); font-weight:700; }
+
+        /* ── 계절 파티클 ── */
+        .particle {
+            position:fixed; pointer-events:none; z-index:2;
+            animation:particleFall linear infinite;
+        }
+        @keyframes particleFall {
+            0%   { transform:translateY(-20px) rotate(0deg); opacity:1; }
+            100% { transform:translateY(100vh) rotate(360deg); opacity:0.3; }
+        }
+
+        /* ── 시간대 오버레이 ── */
+        #timeOverlay {
+            position:fixed; inset:0; z-index:1; pointer-events:none;
+            transition:background 3s ease;
+        }
+
+        /* ── 창 개선 ── */
+        .window-body::-webkit-scrollbar { width:3px; }
+        .window-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+        /* ── 멤버카드 개선 ── */
+        .user-card {
+            transition:transform .15s;
+        }
+        .user-card:hover { transform:translateY(-1px); }
+
+        /* ── 채팅 개선 ── */
+        .chat-line.mine {
+            text-align:right;
+        }
+        .chat-line.mine .chat-bubble {
+            background:linear-gradient(135deg,var(--pink),var(--pink-dark));
+            color:white; margin-left:auto;
+        }
+        .chat-bubble {
+            display:inline-block; padding:6px 12px; border-radius:18px;
+            max-width:80%; background:var(--pink-light);
+            font-size:0.88rem; line-height:1.5;
+            border-bottom-left-radius:4px;
+        }
+        .chat-line.mine .chat-bubble { border-bottom-right-radius:4px; border-bottom-left-radius:18px; }
+        .chat-sender { font-size:0.7rem; color:var(--text-muted); margin-bottom:2px; }
+
+    </style>
+</head>
+<body>
+
+<!-- 닉네임 설정 화면 -->
+<div id="welcomeOverlay">
+    <div class="welcome-box" style="position:relative;z-index:1;">
+        <!-- 언어 선택 -->
+        <div style="display:flex;gap:6px;justify-content:center;">
+            <button onclick="setWelcomeLang('ko')" id="wLangKo"
+                style="padding:4px 12px;border-radius:20px;font-size:0.78rem;border:1.5px solid var(--pink);background:var(--pink-light);color:var(--pink-dark);box-shadow:none;cursor:pointer;transition:all .15s;">🇰🇷 한국어</button>
+            <button onclick="setWelcomeLang('en')" id="wLangEn"
+                style="padding:4px 12px;border-radius:20px;font-size:0.78rem;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);box-shadow:none;cursor:pointer;transition:all .15s;">🇺🇸 English</button>
+            <button onclick="setWelcomeLang('ja')" id="wLangJa"
+                style="padding:4px 12px;border-radius:20px;font-size:0.78rem;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);box-shadow:none;cursor:pointer;transition:all .15s;">🇯🇵 日本語</button>
+        </div>
+        <div class="welcome-cat">📚</div>
+        <div class="welcome-title" id="welcomeTitle">🎀 어서오세요!</div>
+        <div class="welcome-sub" id="welcomeSub">먼저 닉네임을 설정해 주세요</div>
+        <input class="welcome-input" id="welcomeNickInput" type="text" maxlength="16"
+            placeholder="닉네임을 입력하세요..."
+            onkeypress="if(event.keyCode===13)startApp()">
+        <button class="welcome-btn" id="welcomeBtn" onclick="startApp()">시작하기 ✨</button>
+        <div class="welcome-hint" id="welcomeHint">나중에 프로필에서 언제든 바꿀 수 있어요</div>
+    </div>
+</div>
+
+<canvas id="patternCanvas"></canvas>
+<div id="timeOverlay"></div>
+<div id="particleContainer" style="position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden;"></div>
+
+<!-- 언어 선택 -->
+<div class="lang-bar">
+    <select id="langSelect" onchange="changeLanguage(this.value)"
+        style="background:transparent;border:none;font-size:0.82rem;outline:none;cursor:pointer;color:var(--text);">
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="ja">🇯🇵 日本語</option>
+    </select>
+    <div style="width:1px;height:14px;background:var(--border);"></div>
+    <div style="display:flex;gap:5px;align-items:center;">
+        <button onclick="applyTheme('pink')"     title="핑크"   style="width:16px;height:16px;background:#f472b6;border-radius:50%;padding:0;border:none;box-shadow:none;cursor:pointer;transition:transform .15s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform=''"></button>
+        <button onclick="applyTheme('dark')"     title="다크"   style="width:16px;height:16px;background:#1e1b4b;border-radius:50%;padding:0;border:none;box-shadow:none;cursor:pointer;transition:transform .15s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform=''"></button>
+        <button onclick="applyTheme('mint')"     title="민트"   style="width:16px;height:16px;background:#34d399;border-radius:50%;padding:0;border:none;box-shadow:none;cursor:pointer;transition:transform .15s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform=''"></button>
+        <button onclick="applyTheme('lavender')" title="라벤더" style="width:16px;height:16px;background:#c084fc;border-radius:50%;padding:0;border:none;box-shadow:none;cursor:pointer;transition:transform .15s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform=''"></button>
+        <button onclick="applyTheme('sky')"      title="스카이" style="width:16px;height:16px;background:#38bdf8;border-radius:50%;padding:0;border:none;box-shadow:none;cursor:pointer;transition:transform .15s;" onmouseover="this.style.transform='scale(1.3)'" onmouseout="this.style.transform=''"></button>
+    </div>
+    <div style="width:1px;height:14px;background:var(--border);"></div>
+    <button onclick="toggleFocusMode()" title="집중모드" style="background:none;border:none;box-shadow:none;padding:2px 6px;font-size:0.9rem;cursor:pointer;color:var(--text);">🌙</button>
+    <button onclick="toggleBGMPanel()" title="BGM" style="background:none;border:none;box-shadow:none;padding:2px 6px;font-size:0.9rem;cursor:pointer;color:var(--text);" id="bgmToggleBtn">🎵</button>
+</div>
+
+<!-- 집중 모드 오버레이 -->
+<div id="focusOverlay">
+    <div id="focusSubject">열공 중 ✏️</div>
+    <div id="focusTimerBig">00:00:00</div>
+    <div style="color:rgba(255,255,255,0.4);font-size:0.8rem;">ESC 또는 아래 버튼으로 종료</div>
+    <button id="focusExitBtn" onclick="toggleFocusMode()">집중 모드 종료</button>
+</div>
+
+<!-- ① PROFILE -->
+<div class="window resizable-window" id="win-profile" style="display:none;top:20px;left:70px;width:300px;height:490px;">
+    <div class="title-bar" id="profileTitleBar" data-win="win-profile">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-profile')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span>PROFILE_SETTING.SYS ♡</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.82rem;color:var(--gui-dark-pink);">🆔 <span data-lang="lbl_id">아이디</span></span>
+            <span id="myFullCodeDisplay" style="background:var(--text-main);color:#fff;padding:2px 10px;border-radius:8px;font-size:0.8rem;">...</span>
+        </div>
+        <div class="profile-frame" onclick="document.getElementById('profileImgInput').click()">
+            <img id="profileView" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150" alt="프로필">
+        </div>
+        <input type="file" id="profileImgInput" accept="image/*" style="display:none;" onchange="handleProfileUpload(event)">
+        <div style="text-align:center;background:var(--gui-bubble);padding:5px;border-radius:14px;border:2px dashed var(--gui-dark-pink);">
+            <input type="text" id="userName" value="" onchange="updateMyIdentity()" style="text-align:center;">
+        </div>
+        <div>
+            <div class="section-label">🎨 <span data-lang="lbl_theme">테마 색상</span></div>
+            <input type="color" id="colorPicker" value="#ff8ebb"
+                style="height:28px;width:100%;border:var(--round-border);border-radius:10px;cursor:pointer;"
+                onchange="applyCustomColor(this.value)">
+        </div>
+
+        <!-- ★ 배경 패턴 패널 ★ -->
+        <div class="pattern-panel">
+            <div class="section-label">🖼️ <span data-lang="lbl_bg">배경 패턴</span></div>
+            <div class="pattern-btns" id="patternBtns">
+                <button class="pat-btn selected" onclick="selectPattern('none',this)" title="없음">✕</button>
+                <button class="pat-btn" onclick="selectPattern('dot',this)" title="땡땡이">⚫</button>
+                <button class="pat-btn" onclick="selectPattern('heart',this)" title="하트">♡</button>
+                <button class="pat-btn" onclick="selectPattern('star',this)" title="별">★</button>
+                <button class="pat-btn" onclick="selectPattern('check',this)" title="체크">✦</button>
+            </div>
+            <div class="color-row">
+                <label data-lang="lbl_bg_color">배경색</label>
+                <input type="color" id="bgColorPicker" value="#ffdce9"
+                    style="height:24px;width:50px;border:2px solid var(--text-main);border-radius:8px;cursor:pointer;"
+                    onchange="applyBgColor(this.value)">
+                <label data-lang="lbl_pat_color">패턴색</label>
+                <input type="color" id="patColorPicker" value="#ff8ebb"
+                    style="height:24px;width:50px;border:2px solid var(--text-main);border-radius:8px;cursor:pointer;"
+                    onchange="applyPatColor(this.value)">
+                <label style="margin-left:2px;" data-lang="lbl_opacity">투명도</label>
+                <input type="range" id="patOpacity" min="5" max="60" value="22"
+                    style="width:60px;" oninput="applyPatOpacity(this.value)">
+            </div>
+            <div class="color-row">
+                <label data-lang="lbl_img_bg">이미지 배경</label>
+                <input type="file" id="bgLoader" accept="image/*" onchange="handleBgUpload(event)" style="font-size:0.75rem;width:100%;">
+            </div>
+        </div>
+
+
+        <!-- BGM 패널 -->
+        <div class="pattern-panel" id="bgmPanel" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="section-label">🎵 공부 BGM</div>
+                <span id="bgmNowPlaying" style="font-size:0.7rem;color:var(--pink);"></span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;">
+                <button class="bgm-btn" onclick="playBGM('rain')"     style="font-size:0.72rem;padding:4px 8px;">🌧️ 빗소리</button>
+                <button class="bgm-btn" onclick="playBGM('cafe')"     style="font-size:0.72rem;padding:4px 8px;">☕ 카페</button>
+                <button class="bgm-btn" onclick="playBGM('forest')"   style="font-size:0.72rem;padding:4px 8px;">🌲 숲속</button>
+                <button class="bgm-btn" onclick="playBGM('wave')"     style="font-size:0.72rem;padding:4px 8px;">🌊 파도</button>
+                <button class="bgm-btn" onclick="playBGM('fire')"     style="font-size:0.72rem;padding:4px 8px;">🔥 모닥불</button>
+                <button class="bgm-btn" onclick="playBGM('keyboard')" style="font-size:0.72rem;padding:4px 8px;">⌨️ 타이핑</button>
+                <button class="bgm-btn" onclick="stopBGM()"           style="font-size:0.72rem;padding:4px 8px;background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;">⏹ 끄기</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:0.72rem;color:var(--text-muted);">볼륨</span>
+                <input type="range" id="bgmVolume" min="0" max="100" value="40"
+                    oninput="setBGMVolume(this.value)" style="flex:1;height:4px;">
+                <span id="bgmVolLabel" style="font-size:0.72rem;color:var(--text-muted);width:28px;">40%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ② MEMO -->
+<div class="window resizable-window" id="win-memo" style="display:none;top:20px;left:385px;width:300px;height:260px;">
+    <div class="title-bar" id="memoTitleBar" data-win="win-memo">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-memo')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span data-lang="title_memo">TODAY_MEMO.TXT ✏️</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div style="position:relative;flex:1;display:flex;flex-direction:column;">
+            <textarea class="memo-pad" id="memoText"
+                placeholder="오늘 할 일을 적어보세요! ✏️" oninput="keepMemo()" style="flex:1;"></textarea>
+            <span id="memoSavedBadge" style="position:absolute;bottom:8px;right:10px;font-size:0.68rem;color:var(--pink);opacity:0;transition:opacity .3s;pointer-events:none;">💾 저장됨</span>
+        </div>
+        <div style="border-top:2px dashed var(--gui-pink);padding-top:6px;flex-shrink:0;">
+            <button onclick="document.getElementById('stickerLoader').click()"
+                style="width:100%;font-size:0.86rem;" data-lang="btn_sticker">📸 다꾸 스티커 추가</button>
+            <input type="file" id="stickerLoader" accept="image/*" style="display:none;" onchange="uploadSticker(event)">
+        </div>
+    </div>
+</div>
+
+<!-- ③ TIMER -->
+<div class="window resizable-window" id="win-timer" style="display:none;top:20px;left:700px;width:320px;height:340px;">
+    <div class="title-bar" id="timerTitleBar" data-win="win-timer">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-timer')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span data-lang="title_timer">STUDY_TIMER.EXE ⏱️</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <input type="text" id="studySubject" value="열공 중 ✏️" onchange="pushStatus()" placeholder="공부 과목...">
+        <!-- 상태 메시지 -->
+        <div style="position:relative;">
+            <input type="text" id="statusMsg" maxlength="20" placeholder="✏️ 빡공중" data-lang-placeholder="ph_status"
+                style="font-size:0.8rem;padding:5px 10px;border-radius:20px;"
+                onchange="pushStatus()">
+            <div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;gap:4px;">
+                <span onclick="setQuickStatus('✏️ 빡공중')"    style="cursor:pointer;font-size:0.85rem;" title="빡공중">✏️</span>
+                <span onclick="setQuickStatus('☕ 커피수혈중')" style="cursor:pointer;font-size:0.85rem;" title="커피">☕</span>
+                <span onclick="setQuickStatus('💤 졸려요')"    style="cursor:pointer;font-size:0.85rem;" title="졸림">💤</span>
+                <span onclick="setQuickStatus('🚽 자리비움')"  style="cursor:pointer;font-size:0.85rem;" title="자리비움">🚽</span>
+                <span onclick="setQuickStatus('🎧 집중중')"    style="cursor:pointer;font-size:0.85rem;" title="집중">🎧</span>
+            </div>
+        </div>
+        <div class="timer-screen" id="timerDisplay">00:00:00</div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn-green" onclick="runTimer()" style="flex:1;" data-lang="btn_start">▶ START</button>
+            <button class="btn-yellow" onclick="pauseTimer()" style="flex:1;" data-lang="btn_stop">⏸ STOP</button>
+            <button class="btn-red" onclick="clearTimer()" style="flex:1;" data-lang="btn_reset">↺ RESET</button>
+        </div>
+        <div class="room-panel">
+            <div id="roomStatus" style="font-size:0.77rem;text-align:center;color:var(--text-muted);" data-lang="txt_solo">현재 솔로 모드입니다.</div>
+            <div style="display:flex;gap:6px;">
+                <button onclick="openCreateRoomModal()" class="btn-yellow" style="flex:1;font-size:0.84rem;">➕ 방 만들기</button>
+                <button onclick="openJoinRoomModal()"   style="flex:1;font-size:0.84rem;">🚪 방 참가</button>
+            </div>
+            <button onclick="leaveRoom()" id="leaveRoomBtn" style="display:none;font-size:0.78rem;background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;padding:4px;">🚪 방 나가기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ④ CHAT -->
+<div class="window resizable-window" id="win-chat" style="display:none;top:295px;left:385px;width:380px;height:360px;">
+    <div class="title-bar" id="chatTitleBar" data-win="win-chat">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-chat')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span data-lang="title_chat">MESSENGER_CLUB.NET 💬</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button id="tabRoom" class="tab-btn tab-on" onclick="switchChatTab('room')" data-lang="tab_room">방 전체채팅</button>
+            <button id="tabDM" class="tab-btn tab-off" onclick="switchChatTab('dm')" data-lang="tab_dm">1:1 DM</button>
+        </div>
+        <div class="chat-box" id="chatScreen" style="flex:1;min-height:100px;"></div>
+        <div class="reaction-bar">
+            <button class="reaction-btn" onclick="sendReaction('👍')">👍</button>
+            <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+            <button class="reaction-btn" onclick="sendReaction('💀')">💀</button>
+            <button class="reaction-btn" onclick="sendReaction('🎉')">🎉</button>
+            <button class="reaction-btn" onclick="sendReaction('😭')">😭</button>
+            <button class="reaction-btn" onclick="sendReaction('💪')">💪</button>
+            <button class="reaction-btn" onclick="sendReaction('🌸')">🌸</button>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+            <input type="text" id="chatInput" data-lang-placeholder="ph_chat"
+                placeholder="메시지를 입력해 주세요..." onkeypress="if(event.keyCode==13)pushChat()">
+            <button onclick="pushChat()" style="padding:4px 13px;" data-lang="btn_send">전송</button>
+        </div>
+    </div>
+</div>
+
+<!-- ⑤ MEMBERS -->
+<div class="window resizable-window" id="win-members" style="display:none;top:480px;left:70px;width:300px;height:300px;">
+    <div class="title-bar" id="memberTitleBar" data-win="win-members">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-members')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span data-lang="title_members">ROOM_MEMBERS.SYS 👥</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div class="list-box" id="memberList"
+            style="color:#bbb;font-size:0.84rem;align-items:center;justify-content:center;">
+            <span data-lang="txt_no_member">방에 접속하면 멤버가 표시됩니다.</span>
+        </div>
+    </div>
+</div>
+
+<!-- ⑥ YOUTUBE -->
+<div class="window resizable-window" id="win-media" style="display:none;top:295px;left:780px;width:420px;height:360px;">
+    <div class="title-bar" id="mediaTitleBar" data-win="win-media">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-media')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span data-lang="title_media">YOUTUBE_THEATER.BOX 🎬</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div style="display:flex;gap:4px;flex-shrink:0;">
+            <input type="text" id="mediaUrlInput"
+                data-lang-placeholder="ph_yt" placeholder="유튜브 링크 입력..." style="font-size:0.86rem;">
+            <button onclick="shareMediaLink()" style="font-size:0.86rem;padding:4px 11px;" data-lang="btn_play">▶ 재생</button>
+        </div>
+        <div id="videoContainer">
+            <div id="videoPlaceholder">
+                🎵 <span data-lang="txt_yt_hint">영상 링크를 입력하면<br>여기서 바로 재생돼요!</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ⑦ FRIENDS -->
+<div class="window resizable-window" id="win-friends" style="display:none;top:20px;left:1035px;width:310px;height:420px;">
+    <div class="title-bar" id="friendTitleBar" data-win="win-friends">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-friends')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span data-lang="title_friends">FRIENDS_CENTER.EXE 🤝</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body" style="gap:8px;">
+        <!-- 검색/추가 -->
+        <div style="background:var(--pink-light);border:1px solid var(--border);padding:8px;border-radius:var(--radius-sm);flex-shrink:0;">
+            <div style="font-size:0.75rem;color:var(--pink-dark);font-weight:700;margin-bottom:5px;">🔍 <span data-lang="lbl_friend_search">친구 추가</span></div>
+            <div style="display:flex;gap:4px;">
+                <input type="text" id="friendSearchInput" data-lang-placeholder="ph_friend"
+                    placeholder="닉네임#코드 입력" style="font-size:0.84rem;">
+                <button class="btn-mint" onclick="sendFriendRequest()"
+                    style="padding:4px 10px;font-size:0.82rem;white-space:nowrap;" data-lang="btn_add_friend">추가</button>
+            </div>
+        </div>
+        <!-- 받은 친구 신청 -->
+        <div style="flex-shrink:0;">
+            <div class="section-label" style="margin-bottom:5px;">📥 받은 친구 신청 <span id="incomingBadge" style="display:none;background:var(--pink-dark);color:white;font-size:0.65rem;padding:1px 6px;border-radius:10px;margin-left:4px;"></span></div>
+            <div id="incomingRequestsView" style="display:flex;flex-direction:column;gap:4px;max-height:90px;overflow-y:auto;">
+                <span style="font-size:0.8rem;color:var(--text-muted);">없음</span>
+            </div>
+        </div>
+        <!-- 친구 목록 -->
+        <div class="section-label" style="margin-bottom:2px;">🤝 <span data-lang="lbl_friend_list">친구 목록</span></div>
+        <div id="friendsListView" style="display:flex;flex-direction:column;gap:5px;flex-grow:1;overflow-y:auto;"></div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  Firebase — window.onload 에서 초기화
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+    apiKey: "AIzaSyAqHv23jhhuRoYGTXj0hN4JH6zy63-haxk",
+    authDomain: "pink-timer-1618b.firebaseapp.com",
+    databaseURL: "https://pink-timer-1618b-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "pink-timer-1618b"
+};
+let refDB = null;
+
+// ══════════════════════════════════════════════
+//  상태 변수
+// ══════════════════════════════════════════════
+let myId   = localStorage.getItem('study_uid')  || Math.random().toString(36).substring(2,6);
+localStorage.setItem('study_uid', myId);
+
+function generateRandomName() {
+    var lang = navigator.language || navigator.userLanguage || 'ko';
+    var l = lang.toLowerCase().split('-')[0];
+    var names = {
+        ja: ['みなこ','さくら','ゆいな','はるか','あおい','りな','ことね','なつみ','ちひろ','まほ',
+             'けんと','ゆうと','そうた','りく','はると','たいが','れん','しょうた','かいと','ひろ'],
+        zh: ['小梅','小雨','若曦','紫萱','晓彤','思语','佳怡','梦瑶','欣怡','雨桐',
+             '俊豪','宇轩','子墨','浩然','梓轩','明辉','天翊','思远','晨曦','博文'],
+        en: ['Lily','Rose','Luna','Ivy','Nora','Aria','Zoe','Mia','Ella','Chloe',
+             'Leo','Finn','Theo','Eli','Owen','Luca','Noah','Kai','Jace','Zane'],
+        fr: ['Chloé','Inès','Léa','Emma','Jade','Lucie','Manon','Zoé','Alice','Camille',
+             'Hugo','Louis','Gabriel','Théo','Arthur','Lucas','Maxime','Tom','Romain','Axel'],
+        de: ['Lena','Anna','Mia','Emma','Lea','Hannah','Sophia','Clara','Marie','Julia',
+             'Felix','Leon','Paul','Jonas','Elias','Noah','Ben','Lukas','Tim','Finn'],
+        es: ['Sofía','Valentina','Isabella','Camila','Lucía','Valeria','Daniela','Sara','Paula','Elena',
+             'Mateo','Santiago','Sebastián','Miguel','Diego','Andrés','Nicolás','Carlos','Alejandro','Luis'],
+        pt: ['Ana','Sofia','Beatriz','Inês','Mariana','Francisca','Carolina','Laura','Catarina','Marta',
+             'João','Pedro','Tiago','André','Rui','Gonçalo','Bruno','Miguel','David','Luís'],
+        ko: ['미나코','하루나','유이','사쿠라','아오이','리나','코토네','나츠미','치히로','마호',
+             '지우','서연','하은','민서','수아','예린','다은','채원','소율','하린']
+    };
+    var pool = names[l] || names['ko'];
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+let myName = localStorage.getItem('study_name') || generateRandomName();
+if (!localStorage.getItem('study_name')) localStorage.setItem('study_name', myName);
+let myProfileImg = localStorage.getItem('study_profile_img')
+    || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150";
+
+let activeRoom   = null;
+let clockTimer   = null;
+let secondCounter = 0;
+let currentLang  = localStorage.getItem('diary_lang') || "ko";
+let currentChatTab = "room";
+let currentVol   = 50;
+let activeDMTarget = null;
+let mySentRequests = JSON.parse(localStorage.getItem('my_sent_requests') || '[]');
+let myFriends      = JSON.parse(localStorage.getItem('my_friends_list')  || '[]');
+
+// 배경 패턴 상태
+let currentPattern = localStorage.getItem('bg_pattern') || 'none';
+let patternColor   = localStorage.getItem('pat_color')  || '#ff8ebb';
+let patOpacityVal  = parseInt(localStorage.getItem('pat_opacity') || '22');
+let bgColorVal     = localStorage.getItem('bg_color')   || '#ffdce9';
+
+// ══════════════════════════════════════════════
+//  언어팩 — data-lang 키를 모든 UI 텍스트 포함
+// ══════════════════════════════════════════════
+const langPack = {
+    ko: {
+        title_memo:    "TODAY_MEMO.TXT ✏️",
+        title_timer:   "STUDY_TIMER.EXE ⏱️",
+        title_chat:    "MESSENGER_CLUB.NET 💬",
+        title_members: "ROOM_MEMBERS.SYS 👥",
+        title_media:   "YOUTUBE_THEATER.BOX 🎬",
+        title_friends: "FRIENDS_CENTER.EXE 🤝",
+
+        btn_start:       "▶ START",
+        btn_stop:        "⏸ STOP",
+        btn_reset:       "↺ RESET",
+        btn_create_room: "➕ 방 만들기",
+        btn_join_room:   "🚪 참여하기",
+        btn_send:        "전송",
+        btn_play:        "▶ 재생",
+        btn_sticker:     "📸 다꾸 스티커 추가",
+        btn_add_friend:  "추가",
+
+        tab_room: "방 전체채팅",
+        tab_dm:   "1:1 DM",
+
+        txt_solo:      "현재 솔로 모드입니다.",
+        txt_no_member: "방에 접속하면 멤버가 표시됩니다.",
+        txt_yt_hint:   "영상 링크를 입력하면\n여기서 바로 재생돼요!",
+        txt_none:      "없음",
+
+        lbl_id:           "아이디",
+        lbl_theme:        "테마 색상",
+        lbl_bg:           "배경 패턴",
+        lbl_bg_color:     "배경색",
+        lbl_pat_color:    "패턴색",
+        lbl_opacity:      "투명도",
+        lbl_img_bg:       "이미지 배경",
+        lbl_friend_search:"친구 검색 및 추가",
+        lbl_sent_req:     "내가 보낸 요청",
+        lbl_friend_list:  "친구 목록",
+
+        ph_chat:   "메시지를 입력해 주세요...",
+        ph_status: "✏️ 상태 메시지...",
+        tab_stats: "📊 내 통계",
+        tab_rank:  "🏆 방 랭킹",
+        tab_dday:  "📅 D-Day",
+        tab_notice:"📢 방 공지",
+        lbl_today_accum: "📅 오늘 누적 공부",
+        ph_yt:     "유튜브 링크 입력...",
+        ph_friend: "닉네임#코드 입력",
+
+        ph_subject:    "열공 중 ✏️",
+        ph_memo:       "오늘 할 일을 적어보세요! ✏️",
+        ph_dday_label: "이벤트 이름 (예: 수능)",
+        ph_notice_input: "공지 내용 입력...",
+        ph_room_name:  "방 이름 (예: 수능 스터디방)",
+        ph_room_code_new: "방 코드 (예: STUDY7)",
+        ph_room_pw:    "비밀번호 입력 (선택)",
+        ph_join_code:  "방 코드 직접 입력...",
+        ph_nick:       "닉네임을 입력하세요...",
+        ph_goal_done:  "목표를 설정해 주세요!",
+        ph_dday_empty: "D-Day를 추가해 보세요!",
+
+        lbl_goal:      "🎯 목표",
+        lbl_pomo:      "🍅 뽀모도로",
+        lbl_today_stat:"📅 이번 주 공부 시간",
+        lbl_ranking:   "🏆 오늘의 공부왕",
+        lbl_dday_tab:  "📅 D-Day",
+        lbl_notice_tab:"📢 방 공지",
+        lbl_goal_h:    "목표",
+        lbl_goal_m:    "분",
+        lbl_pomo_cycle:"집중 / 휴식 (분)",
+        lbl_stat_week: "📅 이번 주 공부 시간",
+        lbl_rank_room: "🏆 오늘의 공부왕",
+        lbl_room_scene:"🏠 스터디룸 인테리어",
+        lbl_bgm:       "🎵 공부 BGM",
+        lbl_volume:    "볼륨",
+        lbl_focus_exit:"집중 모드 종료",
+        lbl_focus_hint:"ESC 또는 버튼으로 종료",
+
+        btn_set_goal:  "설정",
+        btn_pomo_start:"▶ 시작",
+        btn_pomo_stop: "■ 중지",
+        btn_notice_post:"📢 공지 올리기",
+        btn_dday_add:  "추가",
+        btn_leave_room:"🚪 방 나가기",
+        btn_refresh:   "🔄 새로고침",
+        btn_join_code: "입장",
+        btn_create_confirm: "✨ 방 만들기",
+        btn_cancel:    "취소",
+        btn_close:     "닫기",
+        btn_all_open:  "전체 열기",
+        btn_all_close: "전체 닫기",
+        btn_bgm_stop:  "⏹ 끄기",
+        btn_focus:     "🌙 집중모드",
+        btn_save:      "💾 저장",
+
+        scene_none:    "없음",
+        scene_library: "📚 도서관",
+        scene_cafe:    "☕ 카페",
+        scene_space:   "🚀 우주",
+        scene_forest:  "🌲 숲",
+        scene_beach:   "🏖️ 해변",
+        scene_night:   "🌃 도시야경",
+        scene_cozy:    "🕯️ 아늑한방",
+
+        bgm_rain:      "🌧️ 빗소리",
+        bgm_cafe:      "☕ 카페",
+        bgm_forest:    "🌲 숲속",
+        bgm_wave:      "🌊 파도",
+        bgm_fire:      "🔥 모닥불",
+        bgm_keyboard:  "⌨️ 타이핑",
+
+        modal_create_title: "🏠 새 방 만들기",
+        modal_join_title:   "🚪 방 참가하기",
+        modal_room_name_lbl:"방 이름 *",
+        modal_room_code_lbl:"방 코드 *",
+        modal_room_pw_lbl:  "비밀번호 (없으면 공개방)",
+        modal_room_max_lbl: "최대 인원",
+        modal_or:           "또는 목록에서 선택",
+        modal_public_list:  "🌐 공개 방 목록",
+        modal_pw_needed:    "🔒 비밀번호를 입력해 주세요",
+        modal_no_rooms:     "아직 방이 없어요 🥲",
+        modal_loading:      "불러오는 중...",
+        modal_full:         "꽉 참",
+        modal_joinable:     "입장 가능",
+        modal_owner:        "방장",
+        modal_code_label:   "코드",
+
+        pomo_25_5:     "25/5",
+        pomo_50_10:    "50/10",
+        pomo_90_20:    "90/20",
+        pomo_custom:   "직접:",
+        pomo_focus:    "집중",
+        pomo_break:    "휴식",
+        pomo_work_badge: "집중 🔴",
+        pomo_break_badge: "휴식 🟢",
+
+        stat_today_session: "⏱️ 오늘 현재 세션",
+        stat_min:      "분",
+        rank_no_room:  "방에 입장하면 랭킹이 표시돼요!",
+        rank_no_member:"멤버가 없어요.",
+        rank_title:    "🏆 오늘의 공부왕",
+        notice_none:   "공지 없음",
+        notice_owner_only: "방장만 공지를 작성할 수 있어요.",
+        goal_achieved: "🎉 목표 달성! 대단해요!",
+        goal_remain:   "남은 시간",
+        goal_achieve_msg: "공부 완료! 정말 대단해요 ✨",
+
+        welcome_title: "🎀 어서오세요!",
+        welcome_sub:   "먼저 닉네임을 설정해 주세요",
+        welcome_btn:   "시작하기 ✨",
+        welcome_hint:  "나중에 프로필에서 언제든 바꿀 수 있어요",
+
+        sb_main:   "메인",
+        sb_social: "소통",
+        sb_study:  "공부",
+        sb_deco:   "꾸미기",
+        sb_profile:"프로필",
+        sb_timer:  "타이머",
+        sb_memo:   "메모",
+        sb_chat:   "채팅",
+        sb_members:"멤버",
+        sb_friends:"친구",
+        sb_goal:   "목표 / 뽀모도로",
+        sb_stats:  "통계 / 랭킹",
+        sb_dday:   "D-Day / 공지",
+        sb_media:  "유튜브",
+        sb_clock:  "시계",
+    },
+    en: {
+        title_memo:    "TODAY MEMO ✏️",
+        title_timer:   "STUDY TIMER ⏱️",
+        title_chat:    "MESSENGER 💬",
+        title_members: "ROOM MEMBERS 👥",
+        title_media:   "YOUTUBE THEATER 🎬",
+        title_friends: "FRIENDS CENTER 🤝",
+
+        btn_start:       "▶ START",
+        btn_stop:        "⏸ STOP",
+        btn_reset:       "↺ RESET",
+        btn_create_room: "➕ Create Room",
+        btn_join_room:   "🚪 Join",
+        btn_send:        "Send",
+        btn_play:        "▶ Play",
+        btn_sticker:     "📸 Add Sticker",
+        btn_add_friend:  "Add",
+
+        tab_room: "Room Chat",
+        tab_dm:   "1:1 DM",
+
+        txt_solo:      "Solo mode.",
+        txt_no_member: "Join a room to see members.",
+        txt_yt_hint:   "Paste a YouTube link\nto play here!",
+        txt_none:      "None",
+
+        lbl_id:           "ID",
+        lbl_theme:        "Theme Color",
+        lbl_bg:           "Background Pattern",
+        lbl_bg_color:     "BG Color",
+        lbl_pat_color:    "Pattern Color",
+        lbl_opacity:      "Opacity",
+        lbl_img_bg:       "Image BG",
+        lbl_friend_search:"Search & Add Friend",
+        lbl_sent_req:     "Sent Requests",
+        lbl_friend_list:  "Friends",
+
+        ph_chat:   "Type a message...",
+        ph_status: "✏️ Status message...",
+        tab_stats: "📊 My Stats",
+        tab_rank:  "🏆 Room Ranking",
+        tab_dday:  "📅 D-Day",
+        tab_notice:"📢 Notice",
+        lbl_today_accum: "📅 Today's Study",
+        ph_yt:     "Paste YouTube link...",
+        ph_friend: "username#code",
+
+        ph_subject:    "Studying hard ✏️",
+        ph_memo:       "Write your to-do list! ✏️",
+        ph_dday_label: "Event name (e.g. Exam)",
+        ph_notice_input: "Enter notice...",
+        ph_room_name:  "Room name",
+        ph_room_code_new: "Room code (e.g. STUDY7)",
+        ph_room_pw:    "Password (optional)",
+        ph_join_code:  "Enter room code...",
+        ph_nick:       "Enter nickname...",
+        ph_goal_done:  "Set your goal!",
+        ph_dday_empty: "Add a D-Day!",
+
+        lbl_goal:      "🎯 Goal",
+        lbl_pomo:      "🍅 Pomodoro",
+        lbl_today_stat:"📅 This Week",
+        lbl_ranking:   "🏆 Study King",
+        lbl_dday_tab:  "📅 D-Day",
+        lbl_notice_tab:"📢 Notice",
+        lbl_goal_h:    "Goal",
+        lbl_goal_m:    "min",
+        lbl_pomo_cycle:"Focus / Break (min)",
+        lbl_stat_week: "📅 This Week Study Time",
+        lbl_rank_room: "🏆 Today's Study King",
+        lbl_room_scene:"🏠 Room Interior",
+        lbl_bgm:       "🎵 Study BGM",
+        lbl_volume:    "Volume",
+        lbl_focus_exit:"Exit Focus Mode",
+        lbl_focus_hint:"Press ESC or button to exit",
+
+        btn_set_goal:  "Set",
+        btn_pomo_start:"▶ Start",
+        btn_pomo_stop: "■ Stop",
+        btn_notice_post:"📢 Post Notice",
+        btn_dday_add:  "Add",
+        btn_leave_room:"🚪 Leave Room",
+        btn_refresh:   "🔄 Refresh",
+        btn_join_code: "Enter",
+        btn_create_confirm: "✨ Create Room",
+        btn_cancel:    "Cancel",
+        btn_close:     "Close",
+        btn_all_open:  "Show All",
+        btn_all_close: "Hide All",
+        btn_bgm_stop:  "⏹ Stop",
+        btn_focus:     "🌙 Focus Mode",
+        btn_save:      "💾 Save",
+
+        scene_none:    "None",
+        scene_library: "📚 Library",
+        scene_cafe:    "☕ Café",
+        scene_space:   "🚀 Space",
+        scene_forest:  "🌲 Forest",
+        scene_beach:   "🏖️ Beach",
+        scene_night:   "🌃 City Night",
+        scene_cozy:    "🕯️ Cozy Room",
+
+        bgm_rain:      "🌧️ Rain",
+        bgm_cafe:      "☕ Café",
+        bgm_forest:    "🌲 Forest",
+        bgm_wave:      "🌊 Waves",
+        bgm_fire:      "🔥 Fireplace",
+        bgm_keyboard:  "⌨️ Typing",
+
+        modal_create_title: "🏠 Create New Room",
+        modal_join_title:   "🚪 Join a Room",
+        modal_room_name_lbl:"Room Name *",
+        modal_room_code_lbl:"Room Code *",
+        modal_room_pw_lbl:  "Password (public if empty)",
+        modal_room_max_lbl: "Max Members",
+        modal_or:           "or select from list",
+        modal_public_list:  "🌐 Public Rooms",
+        modal_pw_needed:    "🔒 Enter Password",
+        modal_no_rooms:     "No rooms yet 🥲",
+        modal_loading:      "Loading...",
+        modal_full:         "Full",
+        modal_joinable:     "Join",
+        modal_owner:        "Host",
+        modal_code_label:   "Code",
+
+        pomo_25_5:     "25/5",
+        pomo_50_10:    "50/10",
+        pomo_90_20:    "90/20",
+        pomo_custom:   "Custom:",
+        pomo_focus:    "Focus",
+        pomo_break:    "Break",
+        pomo_work_badge: "Focusing 🔴",
+        pomo_break_badge: "Break 🟢",
+
+        stat_today_session: "⏱️ Today's Session",
+        stat_min:      "min",
+        rank_no_room:  "Join a room to see rankings!",
+        rank_no_member:"No members yet.",
+        rank_title:    "🏆 Today's Study King",
+        notice_none:   "No notice",
+        notice_owner_only: "Only the host can post notices.",
+        goal_achieved: "🎉 Goal Achieved!",
+        goal_remain:   "Remaining",
+        goal_achieve_msg: "Amazing focus! ✨",
+
+        welcome_title: "🎀 Welcome!",
+        welcome_sub:   "First, set your nickname",
+        welcome_btn:   "Let's go ✨",
+        welcome_hint:  "You can change it anytime in Profile",
+
+        sb_main:   "Main",
+        sb_social: "Social",
+        sb_study:  "Study",
+        sb_deco:   "Customize",
+        sb_profile:"Profile",
+        sb_timer:  "Timer",
+        sb_memo:   "Memo",
+        sb_chat:   "Chat",
+        sb_members:"Members",
+        sb_friends:"Friends",
+        sb_goal:   "Goal / Pomodoro",
+        sb_stats:  "Stats / Ranking",
+        sb_dday:   "D-Day / Notice",
+        sb_media:  "YouTube",
+        sb_clock:  "Clock",
+    },
+    ja: {
+        title_memo:    "今日のメモ ✏️",
+        title_timer:   "勉強タイマー ⏱️",
+        title_chat:    "チャット 💬",
+        title_members: "メンバー 👥",
+        title_media:   "YouTube 🎬",
+        title_friends: "友達センター 🤝",
+
+        btn_start:       "▶ スタート",
+        btn_stop:        "⏸ ストップ",
+        btn_reset:       "↺ リセット",
+        btn_create_room: "➕ ルーム作成",
+        btn_join_room:   "🚪 参加する",
+        btn_send:        "送信",
+        btn_play:        "▶ 再生",
+        btn_sticker:     "📸 スタッカー追加",
+        btn_add_friend:  "追加",
+
+        tab_room: "ルーム全体",
+        tab_dm:   "1:1 DM",
+
+        txt_solo:      "ソロモード中。",
+        txt_no_member: "ルームに入るとメンバーが表示されます。",
+        txt_yt_hint:   "YouTubeリンクを入力すると\nここで再生されます！",
+        txt_none:      "なし",
+
+        lbl_id:           "ID",
+        lbl_theme:        "テーマカラー",
+        lbl_bg:           "背景パターン",
+        lbl_bg_color:     "背景色",
+        lbl_pat_color:    "パターン色",
+        lbl_opacity:      "透明度",
+        lbl_img_bg:       "画像背景",
+        lbl_friend_search:"友達検索・追加",
+        lbl_sent_req:     "送ったリクエスト",
+        lbl_friend_list:  "友達リスト",
+
+        ph_chat:   "メッセージを入力...",
+        lbl_dday_tab:  "📅 D-Day",
+        lbl_notice_tab:"📢 お知らせ",
+        lbl_goal_h:    "目標",
+        lbl_goal_m:    "分",
+        lbl_pomo_cycle:"集中 / 休憩 (分)",
+        lbl_stat_week: "📅 今週の勉強時間",
+        lbl_rank_room: "🏆 今日の勉強王",
+        ph_status: "✏️ ステータス...",
+        tab_stats: "📊 統計",
+        tab_rank:  "🏆 ランキング",
+        tab_dday:  "📅 D-Day",
+        tab_notice:"📢 お知らせ",
+        lbl_today_accum: "📅 今日の累計",
+        ph_yt:     "YouTubeリンクを入力...",
+        ph_friend: "ユーザー名#コード",
+        ph_nick:   "ニックネームを入力...",
+        ph_goal_done:  "目標を設定してください！",
+        ph_dday_empty: "D-Dayを追加してみよう！",
+        ph_room_name:  "ルーム名",
+        ph_room_code_new: "ルームコード (例: STUDY7)",
+        ph_room_pw:    "パスワード (任意)",
+        ph_join_code:  "ルームコードを入力...",
+        ph_notice_input: "お知らせ内容を入力...",
+
+        lbl_room_scene:"🏠 スタディルーム",
+        lbl_bgm:       "🎵 BGM",
+        lbl_volume:    "音量",
+        lbl_focus_exit:"集中モード終了",
+        lbl_focus_hint:"ESCまたはボタンで終了",
+
+        btn_set_goal:  "設定",
+        btn_pomo_start:"▶ 開始",
+        btn_pomo_stop: "■ 中止",
+        btn_notice_post:"📢 お知らせを投稿",
+        btn_dday_add:  "追加",
+        btn_leave_room:"🚪 退室",
+        btn_refresh:   "🔄 更新",
+        btn_join_code: "入室",
+        btn_create_confirm: "✨ 作成",
+        btn_cancel:    "キャンセル",
+        btn_close:     "閉じる",
+        btn_all_open:  "全て開く",
+        btn_all_close: "全て閉じる",
+        btn_bgm_stop:  "⏹ 停止",
+        btn_focus:     "🌙 集中モード",
+        btn_save:      "💾 保存",
+
+        scene_none:    "なし",
+        scene_library: "📚 図書館",
+        scene_cafe:    "☕ カフェ",
+        scene_space:   "🚀 宇宙",
+        scene_forest:  "🌲 森",
+        scene_beach:   "🏖️ ビーチ",
+        scene_night:   "🌃 夜の街",
+        scene_cozy:    "🕯️ こもり部屋",
+
+        bgm_rain:      "🌧️ 雨音",
+        bgm_cafe:      "☕ カフェ",
+        bgm_forest:    "🌲 森",
+        bgm_wave:      "🌊 波",
+        bgm_fire:      "🔥 焚き火",
+        bgm_keyboard:  "⌨️ タイピング",
+
+        modal_create_title: "🏠 新しいルームを作成",
+        modal_join_title:   "🚪 ルームに参加",
+        modal_room_name_lbl:"ルーム名 *",
+        modal_room_code_lbl:"ルームコード *",
+        modal_room_pw_lbl:  "パスワード (なければ公開)",
+        modal_room_max_lbl: "最大人数",
+        modal_or:           "またはリストから選択",
+        modal_public_list:  "🌐 公開ルーム一覧",
+        modal_pw_needed:    "🔒 パスワードを入力してください",
+        modal_no_rooms:     "まだルームがありません 🥲",
+        modal_loading:      "読み込み中...",
+        modal_full:         "満員",
+        modal_joinable:     "入室可能",
+        modal_owner:        "ホスト",
+        modal_code_label:   "コード",
+
+        pomo_25_5:     "25/5",
+        pomo_50_10:    "50/10",
+        pomo_90_20:    "90/20",
+        pomo_custom:   "カスタム:",
+        pomo_focus:    "集中",
+        pomo_break:    "休憩",
+        pomo_work_badge: "集中中 🔴",
+        pomo_break_badge: "休憩中 🟢",
+
+        stat_today_session: "⏱️ 今日のセッション",
+        stat_min:      "分",
+        rank_no_room:  "ルームに入るとランキングが表示されます！",
+        rank_no_member:"メンバーがいません。",
+        rank_title:    "🏆 今日の勉強王",
+        notice_none:   "お知らせなし",
+        notice_owner_only: "ホストのみお知らせできます。",
+        goal_achieved: "🎉 目標達成！",
+        goal_remain:   "残り時間",
+        goal_achieve_msg: "素晴らしい集中力！ ✨",
+
+        welcome_title: "🎀 ようこそ！",
+        welcome_sub:   "ニックネームを設定してください",
+        welcome_btn:   "始める ✨",
+        welcome_hint:  "後でプロフィールからいつでも変更できます",
+
+        sb_main:   "メイン",
+        sb_social: "コミュニケーション",
+        sb_study:  "勉強",
+        sb_deco:   "カスタマイズ",
+        sb_profile:"プロフィール",
+        sb_timer:  "タイマー",
+        sb_memo:   "メモ",
+        sb_chat:   "チャット",
+        sb_members:"メンバー",
+        sb_friends:"友達",
+        sb_goal:   "目標 / ポモドーロ",
+        sb_stats:  "統計 / ランキング",
+        sb_dday:   "D-Day / お知らせ",
+        sb_media:  "YouTube",
+        sb_clock:  "時計",
+
+        ph_subject:    "勉強中 ✏️",
+        ph_room_code:  "ルームコード (例: STUDY7)",
+        ph_memo:       "今日やることを書いてみよう！ ✏️",
+        ph_dday_label: "イベント名 (例: 試験)",
+        ph_notice:     "お知らせ内容を入力...",
+        ph_pomo_work:  "集中",
+        ph_pomo_break: "休憩",
+
+        lbl_goal:      "🎯 目標",
+        lbl_pomo:      "🍅 ポモドーロ",
+        lbl_today_stat:"📅 今週の勉強時間",
+        lbl_ranking:   "🏆 今日の勉強王",
+        lbl_dday:      "📅 D-Day",
+        lbl_notice:    "📢 お知らせ",
+        lbl_room_chat: "方全体チャット",
+        lbl_members_count: "名接続中",
+
+        btn_set_goal:  "設定",
+        btn_pomo_start:"▶ 開始",
+        btn_pomo_stop: "■ 中止",
+        btn_post_notice:"📢 お知らせを投稿",
+        btn_add_dday:  "追加",
+        btn_focus:     "🌙 集中モード",
+        btn_all_open:  "全て開く",
+        btn_all_close: "全て閉じる",
+
+        txt_goal_empty:   "目標を設定してください！",
+        txt_no_room_chat: "ルームに入室するとメンバーが表示されます。",
+        txt_dm_hint:      "💌 友達リストからDM相手を選んでください",
+        txt_no_friend:    "登録された友達がいません。",
+        txt_no_dday:      "D-Dayを追加してみよう！",
+        txt_no_notice:    "お知らせなし",
+        txt_room_msg:     "ルーム全体にメッセージ...",
+        txt_dm_msg:       "さんへDM...",
+
+        welcome_title:    "🎀 ようこそ！",
+        welcome_sub:      "まず、ニックネームを設定してください",
+        welcome_ph:       "ニックネームを入力...",
+        welcome_btn:      "始める ✨",
+        welcome_hint:     "後でプロフィールからいつでも変更できます",
+
+        sidebar_main:     "📌 メイン",
+        sidebar_talk:     "💬 コミュニケーション",
+        sidebar_study:    "🎯 勉強",
+        sidebar_deco:     "🌸 カスタマイズ",
+        lbl_profile:      "プロフィール",
+        lbl_timer_sb:     "タイマー",
+        lbl_memo_sb:      "メモ",
+        lbl_chat_sb:      "チャット",
+        lbl_members_sb:   "メンバー",
+        lbl_friends_sb:   "友達",
+        lbl_goal_sb:      "目標/ポモドーロ",
+        lbl_stats_sb:     "統計/ランキング",
+        lbl_dday_sb:      "D-Day/お知らせ",
+        lbl_media_sb:     "YouTube",
+        lbl_clock_sb:     "時計",
+
+        },
+    ko: {
+        ph_subject:    "열공 중 ✏️",
+        ph_room_code:  "방 코드 (예: STUDY7)",
+        ph_memo:       "오늘 할 일을 적어보세요! ✏️",
+        ph_dday_label: "이벤트 이름 (예: 수능)",
+        ph_notice:     "공지 내용 입력...",
+
+        lbl_goal:      "🎯 목표",
+        lbl_pomo:      "🍅 뽀모도로",
+        lbl_today_stat:"📅 이번 주 공부 시간",
+        lbl_ranking:   "🏆 오늘의 공부왕",
+        lbl_dday:      "📅 D-Day",
+        lbl_notice:    "📢 방 공지",
+        lbl_members_count: "명 접속 중",
+
+        btn_set_goal:  "설정",
+        btn_pomo_start:"▶ 시작",
+        btn_pomo_stop: "■ 중지",
+        btn_post_notice:"📢 공지 올리기",
+        btn_add_dday:  "추가",
+        btn_focus:     "🌙 집중모드",
+        btn_all_open:  "전체 열기",
+        btn_all_close: "전체 닫기",
+
+        txt_goal_empty:   "목표를 설정해 주세요!",
+        txt_dm_hint:      "💌 친구 목록에서 DM 상대를 선택하세요",
+        txt_no_friend:    "등록된 친구가 없습니다.",
+        txt_no_dday:      "D-Day를 추가해 보세요!",
+        txt_no_notice:    "공지 없음",
+        txt_room_msg:     "방 전체에게 메시지...",
+
+        welcome_title:    "🎀 어서오세요!",
+        welcome_sub:      "먼저 닉네임을 설정해 주세요",
+        welcome_ph:       "닉네임을 입력하세요...",
+        welcome_btn:      "시작하기 ✨",
+        welcome_hint:     "나중에 프로필에서 언제든 바꿀 수 있어요",
+
+        sidebar_main:     "📌 메인",
+        sidebar_talk:     "💬 소통",
+        sidebar_study:    "🎯 공부",
+        sidebar_deco:     "🌸 꾸미기",
+        lbl_profile:      "프로필",
+        lbl_timer_sb:     "타이머",
+        lbl_memo_sb:      "메모",
+        lbl_chat_sb:      "채팅",
+        lbl_members_sb:   "멤버",
+        lbl_friends_sb:   "친구",
+        lbl_goal_sb:      "목표/뽀모도로",
+        lbl_stats_sb:     "통계/랭킹",
+        lbl_dday_sb:      "D-Day/공지",
+        lbl_media_sb:     "유튜브",
+        lbl_clock_sb:     "시계",
+
+        },
+    en: {
+        ph_subject:    "Studying hard ✏️",
+        ph_room_code:  "Room code (e.g. STUDY7)",
+        ph_memo:       "Write your to-do list! ✏️",
+        ph_dday_label: "Event name (e.g. Exam)",
+        ph_notice:     "Enter notice...",
+
+        lbl_goal:      "🎯 Goal",
+        lbl_pomo:      "🍅 Pomodoro",
+        lbl_today_stat:"📅 This Week",
+        lbl_ranking:   "🏆 Study King",
+        lbl_dday:      "📅 D-Day",
+        lbl_notice:    "📢 Notice",
+        lbl_members_count: " online",
+
+        btn_set_goal:  "Set",
+        btn_pomo_start:"▶ Start",
+        btn_pomo_stop: "■ Stop",
+        btn_post_notice:"📢 Post Notice",
+        btn_add_dday:  "Add",
+        btn_focus:     "🌙 Focus",
+        btn_all_open:  "Show All",
+        btn_all_close: "Hide All",
+
+        txt_goal_empty:   "Set your goal!",
+        txt_dm_hint:      "💌 Select a friend to DM",
+        txt_no_friend:    "No friends yet.",
+        txt_no_dday:      "Add a D-Day!",
+        txt_no_notice:    "No notice",
+        txt_room_msg:     "Message everyone...",
+
+        welcome_title:    "🎀 Welcome!",
+        welcome_sub:      "First, set your nickname",
+        welcome_ph:       "Enter nickname...",
+        welcome_btn:      "Let's go ✨",
+        welcome_hint:     "You can change it anytime in Profile",
+
+        sidebar_main:     "📌 Main",
+        sidebar_talk:     "💬 Social",
+        sidebar_study:    "🎯 Study",
+        sidebar_deco:     "🌸 Customize",
+        lbl_profile:      "Profile",
+        lbl_timer_sb:     "Timer",
+        lbl_memo_sb:      "Memo",
+        lbl_chat_sb:      "Chat",
+        lbl_members_sb:   "Members",
+        lbl_friends_sb:   "Friends",
+        lbl_goal_sb:      "Goal/Pomodoro",
+        lbl_stats_sb:     "Stats/Ranking",
+        lbl_dday_sb:      "D-Day/Notice",
+        lbl_media_sb:     "YouTube",
+        lbl_clock_sb:     "Clock",
+
+        }
+};
+
+// ══════════════════════════════════════════════
+//  언어 변경 — innerText + placeholder 모두 처리
+// ══════════════════════════════════════════════
+function changeLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('diary_lang', lang);
+    // 페이지 타이틀 변경
+    var titles = {ko:'🎀 핑크푸딩 스터디클럽', en:'🎀 Pink Pudding Study Club', ja:'🎀 ピンクプリン スタディクラブ'};
+    document.title = titles[lang] || titles['ko'];
+    var p = langPack[lang] || langPack['ko'];
+    var ko = langPack['ko'];
+    function t(key) { return (p[key] !== undefined ? p[key] : (ko[key] !== undefined ? ko[key] : key)); }
+
+    // ── data-lang 속성 ──
+    document.querySelectorAll('[data-lang]').forEach(function(el) {
+        var key = el.getAttribute('data-lang');
+        var val = t(key);
+        if (val !== key) el.innerText = val;
+    });
+
+    // ── data-lang-placeholder 속성 ──
+    document.querySelectorAll('[data-lang-placeholder]').forEach(function(el) {
+        var key = el.getAttribute('data-lang-placeholder');
+        var val = t(key);
+        if (val !== key) el.placeholder = val;
+    });
+
+    // ── select 동기 ──
+    var sel = document.getElementById('langSelect');
+    if (sel) sel.value = lang;
+
+    // ── placeholder 직접 ──
+    var phMap = {
+        studySubject:      'ph_subject',
+        memoText:          'ph_memo',
+        chatInput:         'ph_chat',
+        mediaUrlInput:     'ph_yt',
+        friendSearchInput: 'ph_friend',
+        ddayLabel:         'ph_dday_label',
+        noticeInput:       'ph_notice_input',
+        newRoomName:       'ph_room_name',
+        newRoomCode:       'ph_room_code_new',
+        newRoomPw:         'ph_room_pw',
+        joinRoomCode:      'ph_join_code',
+        welcomeNickInput:  'ph_nick',
+        statusMsg:         'ph_status',
+    };
+    Object.keys(phMap).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.placeholder = t(phMap[id]);
+    });
+
+    // ── 웰컴 화면 ──
+    var wMap = {
+        welcomeTitle: 'welcome_title',
+        welcomeSub:   'welcome_sub',
+        welcomeBtn:   'welcome_btn',
+        welcomeHint:  'welcome_hint',
+    };
+    Object.keys(wMap).forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerText = t(wMap[id]);
+    });
+
+    // ── 버튼 직접 업데이트 ──
+    function setBtn(sel, key) {
+        var el = document.querySelector(sel);
+        if (el) el.innerText = t(key);
+    }
+    function setId(id, key) {
+        var el = document.getElementById(id);
+        if (el) el.innerText = t(key);
+    }
+
+    setBtn('[onclick="toggleFocusMode()"]', 'btn_focus');
+    setId('focusExitBtn', 'lbl_focus_exit');
+    setBtn('[onclick="startPomo()"]',    'btn_pomo_start');
+    setBtn('[onclick="stopPomo()"]',     'btn_pomo_stop');
+    setBtn('[onclick="setGoal()"]',      'btn_set_goal');
+    setBtn('[onclick="postNotice()"]',   'btn_notice_post');
+    setBtn('[onclick="addDday()"]',      'btn_dday_add');
+    setId('leaveRoomBtn',                'btn_leave_room');
+
+    // ── 사이드바 그룹 라벨 ──
+    var sbGroups = document.querySelectorAll('.sb-group-label');
+    var gkeys = ['sb_main','sb_social','sb_study'];
+    sbGroups.forEach(function(el, i) { if (gkeys[i]) el.innerText = t(gkeys[i]); });
+
+    // ── 사이드바 버튼 레이블 ──
+    var sbWinMap = {
+        'win-profile': 'sb_profile', 'win-timer':   'sb_timer',
+        'win-memo':    'sb_memo',    'win-chat':    'sb_chat',
+        'win-members': 'sb_members', 'win-friends': 'sb_friends',
+        'win-goal':    'sb_goal',    'win-stats':   'sb_stats',
+        'win-dday':    'sb_dday',    'win-media':   'sb_media',
+        'win-clock':   'sb_clock',
+    };
+    Object.keys(sbWinMap).forEach(function(wid) {
+        var lbl = document.querySelector('.sb-btn[data-win="'+wid+'"] .sb-label');
+        if (lbl) lbl.innerText = t(sbWinMap[wid]);
+    });
+    var aoLbl = document.querySelector('.sb-btn[onclick="showAllWindows()"] .sb-label');
+    var acLbl = document.querySelector('.sb-btn[onclick="hideAllWindows()"] .sb-label');
+    var rstLbl = document.querySelector('.sb-btn[onclick="resetWindowPositions()"] .sb-label');
+    var curLbl = document.querySelector('.sb-btn[onclick="toggleCursorEffect()"] .sb-label');
+    if (aoLbl) aoLbl.innerText = t('btn_all_open');
+    if (acLbl) acLbl.innerText = t('btn_all_close');
+    if (rstLbl) rstLbl.innerText = t('btn_reset_wins') || '창 위치 초기화';
+    if (curLbl) curLbl.innerText = t('btn_cursor_fx') || '클릭 이펙트';
+
+    // ── D-Day / 공지 탭 ──
+    setId('tabDday',   'tab_dday');
+    setId('tabNotice', 'tab_notice');
+
+    // ── 통계 / 랭킹 탭 ──
+    setId('tabStats', 'tab_stats');
+    setId('tabRank',  'tab_rank');
+
+    // ── 뽀모도로 프리셋 ──
+    var presets = document.querySelectorAll('[onclick*="setPomoPreset"]');
+    var pkeys = ['pomo_25_5','pomo_50_10','pomo_90_20'];
+    presets.forEach(function(b, i) { if (pkeys[i]) b.innerText = t(pkeys[i]); });
+
+    // ── BGM 버튼 ──
+    var bgmMap = {rain:'bgm_rain',cafe:'bgm_cafe',forest:'bgm_forest',wave:'bgm_wave',fire:'bgm_fire',keyboard:'bgm_keyboard'};
+    document.querySelectorAll('.bgm-btn').forEach(function(btn) {
+        var oc = btn.getAttribute('onclick')||'';
+        var m = oc.match(/playBGM\('(\w+)'\)/);
+        if (m && bgmMap[m[1]]) btn.innerText = t(bgmMap[m[1]]);
+        else if (oc.includes('stopBGM')) btn.innerText = t('btn_bgm_stop');
+    });
+
+    // ── 볼륨 라벨 ──
+    var volSpans = document.querySelectorAll('#bgmPanel span');
+    volSpans.forEach(function(el) {
+        if (['볼륨','Volume','音量'].indexOf(el.innerText.trim()) !== -1)
+            el.innerText = t('lbl_volume');
+    });
+
+    // ── 인테리어 버튼 ──
+    document.querySelectorAll('.room-scene-btn-disabled').forEach(function(btn) {
+        var m = (btn.getAttribute('onclick')||'').match(/setRoomScene\('(\w+)'/);
+        if (m && p['scene_'+m[1]]) btn.innerText = t('scene_'+m[1]);
+    });
+
+    // ── 오늘 누적 ──
+    setId('todayAccumLabel', 'lbl_today_accum');
+}
+
+// ══════════════════════════════════════════════
+//  배경 패턴 (Canvas 렌더링)
+// ══════════════════════════════════════════════
+function hexToRgba(hex, alpha) {
+    var r = parseInt(hex.slice(1,3),16);
+    var g = parseInt(hex.slice(3,5),16);
+    var b = parseInt(hex.slice(5,7),16);
+    return 'rgba('+r+','+g+','+b+','+alpha+')';
+}
+
+function drawPattern() {
+    var canvas = document.getElementById('patternCanvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (currentPattern === 'none') return;
+
+    var alpha = patOpacityVal / 100;
+    var color = hexToRgba(patternColor, alpha);
+    var gap = 38;
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+
+    for (var x = gap/2; x < canvas.width + gap; x += gap) {
+        for (var y = gap/2; y < canvas.height + gap; y += gap) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            if (currentPattern === 'dot') {
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI*2);
+                ctx.fill();
+
+            } else if (currentPattern === 'heart') {
+                ctx.font = '18px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('♡', 0, 0);
+
+            } else if (currentPattern === 'star') {
+                ctx.font = '18px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★', 0, 0);
+
+            } else if (currentPattern === 'check') {
+                ctx.font = '16px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('✦', 0, 0);
+            }
+            ctx.restore();
+        }
+    }
+}
+
+function selectPattern(type, btn) {
+    currentPattern = type;
+    localStorage.setItem('bg_pattern', type);
+    document.querySelectorAll('.pat-btn').forEach(function(b){ b.classList.remove('selected'); });
+    if (btn) { btn.classList.add('selected'); }
+    drawPattern();
+}
+
+function applyBgColor(color) {
+    bgColorVal = color;
+    localStorage.setItem('bg_color', color);
+    document.documentElement.style.setProperty('--bg-color', color);
+}
+
+function applyPatColor(color) {
+    patternColor = color;
+    localStorage.setItem('pat_color', color);
+    drawPattern();
+}
+
+function applyPatOpacity(val) {
+    patOpacityVal = parseInt(val);
+    localStorage.setItem('pat_opacity', val);
+    drawPattern();
+}
+
+function handleBgUpload(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        document.body.style.backgroundImage = 'url(' + e.target.result + ')';
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundPosition = 'center';
+    };
+    reader.readAsDataURL(file);
+}
+
+// 채팅 분리 저장소
+let roomChatMessages = [];   // 방 전체 채팅 (Firebase에서 받은 것)
+let dmChatMessages   = [];   // 1:1 DM (로컬)
+
+// ══════════════════════════════════════════════
+//  초기화
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  웰컴 화면 언어 설정
+// ══════════════════════════════════════════════
+var welcomeTexts = {
+    ko: {
+        title: '🎀 어서오세요!',
+        sub:   '먼저 닉네임을 설정해 주세요',
+        ph:    '닉네임을 입력하세요...',
+        btn:   '시작하기 ✨',
+        hint:  '나중에 프로필에서 언제든 바꿀 수 있어요',
+    },
+    en: {
+        title: '🎀 Welcome!',
+        sub:   'First, set your nickname',
+        ph:    'Enter your nickname...',
+        btn:   "Let's go ✨",
+        hint:  'You can change it anytime in Profile',
+    },
+    ja: {
+        title: '🎀 ようこそ！',
+        sub:   'ニックネームを設定してください',
+        ph:    'ニックネームを入力...',
+        btn:   '始める ✨',
+        hint:  'プロフィールからいつでも変更できます',
+    },
+};
+
+function setWelcomeLang(lang) {
+    currentLang = lang;
+    localStorage.setItem('diary_lang', lang);
+    var t = welcomeTexts[lang] || welcomeTexts['ko'];
+
+    document.getElementById('welcomeTitle').innerText = t.title;
+    document.getElementById('welcomeSub').innerText   = t.sub;
+    document.getElementById('welcomeNickInput').placeholder = t.ph;
+    document.getElementById('welcomeBtn').innerText   = t.btn;
+    document.getElementById('welcomeHint').innerText  = t.hint;
+
+    // 랜덤 닉네임도 해당 언어로 교체
+    document.getElementById('welcomeNickInput').value = '';
+
+    // 버튼 스타일 토글
+    ['ko','en','ja'].forEach(function(l) {
+        var btn = document.getElementById('wLang'+l.charAt(0).toUpperCase()+l.slice(1));
+        if (!btn) return;
+        if (l === lang) {
+            btn.style.background = 'var(--pink-light)';
+            btn.style.borderColor = 'var(--pink)';
+            btn.style.color = 'var(--pink-dark)';
+        } else {
+            btn.style.background = 'transparent';
+            btn.style.borderColor = 'var(--border)';
+            btn.style.color = 'var(--text-muted)';
+        }
+    });
+}
+
+function startApp() {
+    var input = document.getElementById('welcomeNickInput');
+    var nick = input ? input.value.trim() : '';
+    if (!nick) {
+        if (input) {
+            input.style.animation = 'shake 0.4s ease';
+            setTimeout(function(){ input.style.animation = ''; input.focus(); }, 400);
+        }
+        return;
+    }
+    myName = nick;
+    localStorage.setItem('study_name', myName);
+
+    // 웰컴 화면 숨기기
+    var overlay = document.getElementById('welcomeOverlay');
+    if (overlay) overlay.classList.add('hidden');
+
+    // 기본 창만 열기 (allWinIds에 의존하지 않음)
+    var _open = ['win-timer','win-chat','win-members'];
+    var _all  = ['win-profile','win-memo','win-timer','win-chat','win-members',
+                 'win-media','win-friends','win-goal','win-stats','win-dday','win-clock'];
+    _all.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var isOpen = _open.indexOf(id) !== -1;
+        el.style.display = isOpen ? 'flex' : 'none';
+        if (isOpen) el.style.flexDirection = 'column';
+        var btn = document.querySelector('.sb-btn[data-win="'+id+'"]');
+        if (btn) {
+            if (isOpen) { btn.classList.remove('sb-hidden'); btn.classList.add('sb-active'); }
+            else        { btn.classList.add('sb-hidden');    btn.classList.remove('sb-active'); }
+        }
+    });
+
+    // 닉네임 반영
+    var un = document.getElementById('userName');
+    if (un) un.value = myName;
+    if (typeof updateMyIdentity === 'function') updateMyIdentity();
+    if (typeof changeLanguage  === 'function')  changeLanguage(currentLang || 'ko');
+}
+
+window.onload = function() {
+    // YouTube IFrame API 미리 로드
+    loadYouTubeAPI();
+
+    // ① Firebase 초기화 (스크립트 로드 완료 후)
+    try {
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+            refDB = firebase.database();
+        }
+    } catch(e) { console.warn("Firebase 초기화 실패:", e); }
+
+    // ② 첫 접속 여부 판단
+    var _allIds     = ['win-profile','win-memo','win-timer','win-chat','win-members','win-media','win-friends','win-goal','win-stats','win-dday','win-clock'];
+    var _defaultIds = ['win-timer','win-chat','win-members'];
+
+    function _applyWindowLayout() {
+        _allIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var isOpen = _defaultIds.indexOf(id) !== -1;
+            el.style.display = isOpen ? 'flex' : 'none';
+            if (isOpen) el.style.flexDirection = 'column';
+            var btn = document.querySelector('.sb-btn[data-win="'+id+'"]');
+            if (btn) {
+                if (isOpen) { btn.classList.remove('sb-hidden'); btn.classList.add('sb-active'); }
+                else { btn.classList.add('sb-hidden'); btn.classList.remove('sb-active'); }
+            }
+        });
+    }
+
+    var isFirstVisit = !localStorage.getItem('study_name');
+    if (!isFirstVisit) {
+        // 기존 사용자 → 바로 시작
+        var ov = document.getElementById('welcomeOverlay');
+        if (ov) ov.classList.add('hidden');
+        _applyWindowLayout();
+    } else {
+        // 첫 방문 → 모든 창 숨기기
+        _allIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        // 브라우저 언어 감지
+        var detectedLang = (navigator.language || 'ko').split('-')[0];
+        if (typeof setWelcomeLang === 'function') {
+            setWelcomeLang(['ko','en','ja'].indexOf(detectedLang) !== -1 ? detectedLang : 'ko');
+        }
+        setTimeout(function(){
+            var i = document.getElementById('welcomeNickInput');
+            if (i) i.focus();
+        }, 300);
+    }
+
+    // 저장된 배경 복원
+    document.documentElement.style.setProperty('--bg-color', bgColorVal);
+    document.getElementById('bgColorPicker').value = bgColorVal;
+    document.getElementById('patColorPicker').value = patternColor;
+    document.getElementById('patOpacity').value = patOpacityVal;
+
+    // 저장된 패턴 버튼 selected 복원
+    document.querySelectorAll('.pat-btn').forEach(function(btn) {
+        var pat = btn.getAttribute('onclick').match(/selectPattern\('(\w+)'/);
+        if (pat && pat[1] === currentPattern) { btn.classList.add('selected'); }
+        else { btn.classList.remove('selected'); }
+    });
+    drawPattern();
+    window.addEventListener('resize', drawPattern);
+
+    // 프로필 복원
+    document.getElementById('userName').value = myName;
+    document.getElementById('profileView').src = myProfileImg;
+    if (localStorage.getItem('study_memo_data')) {
+        document.getElementById('memoText').value = localStorage.getItem('study_memo_data');
+    }
+    applyCustomColor(localStorage.getItem('study_theme_color') || "#ff8ebb");
+    document.getElementById('colorPicker').value = localStorage.getItem('study_theme_color') || "#ff8ebb";
+
+    updateMyIdentity();
+    changeLanguage(currentLang);
+    // 앱 시작 시 친구 신청 확인
+    if (typeof loadIncomingRequests === 'function') {
+        setTimeout(loadIncomingRequests, 1500);
+    }
+    // 오늘 누적 타이커 초기 표시
+    updateTodayAccumDisplay();
+    renderFriendsUI();
+    renderDday();
+    renderStats();
+    document.querySelectorAll('.window').forEach(makeElementDraggable);
+    // applyCustomColor을 새 창에도 적용
+    var savedColor = localStorage.getItem('study_theme_color') || '#ff8ebb';
+    drawAnalogClock();
+    // 저장된 디자인 복원
+    // 커스터마이저 창 타이틀바 색상
+    var sc = localStorage.getItem('study_theme_color') || '#ff8ebb';
+    
+    ['goalTitleBar','statTitleBar','ddayTitleBar','clockTitleBar'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.background = 'linear-gradient(90deg,'+savedColor+',#ffb8d4,'+savedColor+')';
+    });
+};
+
+// ══════════════════════════════════════════════
+//  프로필 / 테마
+// ══════════════════════════════════════════════
+function updateMyIdentity() {
+    myName = document.getElementById('userName').value.trim() || "User";
+    localStorage.setItem('study_name', myName);
+    document.getElementById('myFullCodeDisplay').innerText = myName + "#" + myId;
+    pushStatus();
+}
+
+function handleProfileUpload(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        myProfileImg = e.target.result;
+        document.getElementById('profileView').src = myProfileImg;
+        localStorage.setItem('study_profile_img', myProfileImg);
+        pushStatus();
+    };
+    reader.readAsDataURL(file);
+}
+
+function applyCustomColor(color) {
+    document.documentElement.style.setProperty('--gui-pink', color);
+    document.documentElement.style.setProperty('--gui-dark-pink', shadeColor(color, -20));
+    localStorage.setItem('study_theme_color', color);
+    ['profileTitleBar','memoTitleBar','timerTitleBar','chatTitleBar','memberTitleBar','mediaTitleBar','friendTitleBar','goalTitleBar','statTitleBar','ddayTitleBar','clockTitleBar']
+    .forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) { el.style.background = 'linear-gradient(90deg,'+color+',#ffb8d4,'+color+')'; }
+    });
+}
+
+function shadeColor(hex, percent) {
+    var num = parseInt(hex.slice(1), 16);
+    var r = Math.min(255, Math.max(0, (num >> 16) + percent));
+    var g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + percent));
+    var b = Math.min(255, Math.max(0, (num & 0xff) + percent));
+    return '#' + ((1<<24)|(r<<16)|(g<<8)|b).toString(16).slice(1);
+}
+
+// ══════════════════════════════════════════════
+//  방 만들기 / 참여하기
+// ══════════════════════════════════════════════
+var isRoomOwner = false;
+var pendingJoinCode = null;
+
+// ── 방 만들기 모달 ──
+function openCreateRoomModal() {
+    var m = document.getElementById('createRoomModal');
+    m.style.display = 'flex';
+    setTimeout(function(){ document.getElementById('newRoomName').focus(); }, 100);
+}
+function closeCreateRoomModal() {
+    document.getElementById('createRoomModal').style.display = 'none';
+}
+
+function confirmCreateRoom() {
+    if (!refDB) { alert("Firebase 연결 중이에요. 잠시 후 다시 시도해 주세요!"); return; }
+    var name = document.getElementById('newRoomName').value.trim();
+    var code = document.getElementById('newRoomCode').value.trim().toUpperCase();
+    var pw   = document.getElementById('newRoomPw').value;
+    var max  = parseInt(document.getElementById('newRoomMax').value);
+
+    if (!name) { alert("방 이름을 입력해 주세요!"); document.getElementById('newRoomName').focus(); return; }
+    if (!code || code.length < 2) { alert("방 코드를 2자 이상 입력해 주세요!"); document.getElementById('newRoomCode').focus(); return; }
+
+    refDB.ref('studyclub/' + code + '/info').once('value', function(snap) {
+        if (snap.exists()) {
+            alert("이미 존재하는 방 코드예요!\n다른 코드를 사용해 주세요.");
+            document.getElementById('newRoomCode').focus();
+            return;
+        }
+        // 방 정보 저장
+        var roomInfo = {
+            name:    name,
+            code:    code,
+            owner:   myId,
+            ownerName: myName,
+            pw:      pw ? btoa(pw) : '',  // 간단 인코딩
+            max:     max,
+            isPublic: !pw,
+            created: Date.now()
+        };
+        refDB.ref('studyclub/' + code + '/info').set(roomInfo);
+        isRoomOwner = true;
+        closeCreateRoomModal();
+        proceedConnect(code);
+        addSystemMessage('🏠 [' + name + '] 방을 만들었어요! 코드: ' + code);
+        document.getElementById('leaveRoomBtn').style.display = '';
+        document.getElementById('roomStatus').innerHTML =
+            '👑 방장 · <b>' + name + '</b> <span style="font-size:0.7rem;opacity:0.6;">[' + code + ']</span>';
+    });
+}
+
+// ── 방 참가 모달 ──
+function openJoinRoomModal() {
+    var m = document.getElementById('joinRoomModal');
+    m.style.display = 'flex';
+    loadRoomList();
+}
+function closeJoinRoomModal() {
+    document.getElementById('joinRoomModal').style.display = 'none';
+    document.getElementById('joinPwSection').style.display = 'none';
+    pendingJoinCode = null;
+}
+
+function loadRoomList() {
+    var container = document.getElementById('roomListContainer');
+    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.84rem;padding:20px;">🔄 불러오는 중...</div>';
+    if (!refDB) { container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;">Firebase 연결 필요</div>'; return; }
+
+    refDB.ref('studyclub').once('value', function(snap) {
+        container.innerHTML = '';
+        if (!snap.exists()) {
+            container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.84rem;padding:20px;">아직 방이 없어요 🥲</div>';
+            return;
+        }
+        var rooms = [];
+        snap.forEach(function(child) {
+            var info = child.val().info;
+            if (!info) return;
+            var users = child.val().users || {};
+            var memberCount = Object.keys(users).length;
+            rooms.push({ info: info, memberCount: memberCount });
+        });
+
+        if (rooms.length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:0.84rem;padding:20px;">아직 방이 없어요 🥲</div>';
+            return;
+        }
+
+        // 최신순 정렬
+        rooms.sort(function(a,b){ return (b.info.created||0)-(a.info.created||0); });
+
+        rooms.forEach(function(r) {
+            var info = r.info;
+            var isFull = r.memberCount >= (info.max || 99);
+            var card = document.createElement('div');
+            card.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.7);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;' + (isFull?'opacity:0.5;':'');
+            card.onmouseover = function(){ if(!isFull) this.style.background='var(--pink-light)'; };
+            card.onmouseout  = function(){ this.style.background='rgba(255,255,255,0.7)'; };
+            card.innerHTML =
+                '<div style="font-size:1.4rem;">' + (info.isPublic ? '🌐' : '🔒') + '</div>' +
+                '<div style="flex:1;">' +
+                    '<div style="font-size:0.9rem;font-weight:700;color:var(--text);">' + (info.name||info.code) + '</div>' +
+                    '<div style="font-size:0.72rem;color:var(--text-muted);">방장: ' + (info.ownerName||'?') + ' · 코드: ' + info.code + '</div>' +
+                '</div>' +
+                '<div style="text-align:right;flex-shrink:0;">' +
+                    '<div style="font-size:0.8rem;font-weight:700;color:' + (isFull?'#ef4444':'var(--pink-dark)') + ';">' +
+                        r.memberCount + ' / ' + (info.max>=99?'∞':info.max) + '</div>' +
+                    '<div style="font-size:0.65rem;color:var(--text-muted);">' + (isFull?'꽉 참':'입장 가능') + '</div>' +
+                '</div>';
+            if (!isFull) {
+                card.onclick = function() { tryJoinRoom(info); };
+            }
+            container.appendChild(card);
+        });
+    });
+}
+
+function tryJoinRoom(info) {
+    if (info.pw) {
+        // 비번 있는 방
+        pendingJoinCode = info.code;
+        document.getElementById('joinPwSection').style.display = 'flex';
+        document.getElementById('joinRoomPw').focus();
+    } else {
+        // 공개방 바로 입장
+        doJoinRoom(info.code, info.name);
+    }
+}
+
+function confirmJoinWithPw() {
+    if (!pendingJoinCode) return;
+    var code = pendingJoinCode;
+    var inputPw = document.getElementById('joinRoomPw').value;
+    refDB.ref('studyclub/' + code + '/info').once('value', function(snap) {
+        if (!snap.exists()) { alert('방을 찾을 수 없어요.'); return; }
+        var info = snap.val();
+        if (info.pw && atob(info.pw) !== inputPw) {
+            alert('비밀번호가 틀렸어요! 🔒');
+            document.getElementById('joinRoomPw').value = '';
+            document.getElementById('joinRoomPw').focus();
+            return;
+        }
+        doJoinRoom(code, info.name);
+    });
+}
+
+function joinByCode() {
+    var code = document.getElementById('joinRoomCode').value.trim().toUpperCase();
+    if (!code) { alert('방 코드를 입력해 주세요!'); return; }
+    if (!refDB) { alert('Firebase 연결 중이에요.'); return; }
+    refDB.ref('studyclub/' + code + '/info').once('value', function(snap) {
+        if (!snap.exists()) {
+            alert('존재하지 않는 방이에요. 코드를 다시 확인해 주세요!');
+            return;
+        }
+        tryJoinRoom(snap.val());
+    });
+}
+
+function doJoinRoom(code, name) {
+    isRoomOwner = false;
+    closeJoinRoomModal();
+    proceedConnect(code);
+    addSystemMessage('🚪 [' + (name||code) + '] 방에 입장했어요!');
+    document.getElementById('leaveRoomBtn').style.display = '';
+    document.getElementById('roomStatus').innerHTML =
+        '✅ <b>' + (name||code) + '</b> <span style="font-size:0.7rem;opacity:0.6;">[' + code + ']</span>';
+}
+
+function leaveRoom() {
+    if (!activeRoom) return;
+    if (!confirm('방에서 나가시겠어요?')) return;
+    if (refDB) {
+        if (isRoomOwner) {
+            if (confirm('방장이 나가면 방이 삭제돼요. 계속할까요?')) {
+                try { refDB.ref('studyclub/' + activeRoom).remove(); } catch(e){}
+            } else return;
+        } else {
+            try { refDB.ref('studyclub/' + activeRoom + '/users/' + myId).remove(); } catch(e){}
+        }
+        // Firebase 리스너 해제
+        try { refDB.ref('studyclub/' + activeRoom).off(); } catch(e){}
+    }
+    activeRoom = null;
+    isRoomOwner = false;
+    // roomChatMessages 초기화
+    roomChatMessages = [];
+    renderCurrentTab();
+    var rs = document.getElementById('roomStatus');
+    if (rs) rs.innerText = (langPack[currentLang]&&langPack[currentLang].txt_solo)||'현재 솔로 모드입니다.';
+    var lb = document.getElementById('leaveRoomBtn');
+    if (lb) lb.style.display = 'none';
+    addSystemMessage('👋 방에서 나갔어요.');
+    var list = document.getElementById('memberList');
+    if (list) list.innerHTML = '<div style="color:var(--text-muted);font-size:0.84rem;text-align:center;padding:10px;">방에 입장하면 멤버가 표시됩니다.</div>';
+    showToast('👋 방에서 나갔어요.');
+}
+
+// createNewRoom, joinExistingRoom 구 함수는 호환용으로 유지
+function createNewRoom() { openCreateRoomModal(); }
+function joinExistingRoom() { openJoinRoomModal(); }
+
+function proceedConnect(code) {
+    activeRoom = code;
+    document.getElementById('roomStatus').innerText = "연결된 방: [ " + code + " ]";
+
+    // 채팅창에 입장 시스템 메시지 표시
+    addSystemMessage("🎀 " + myName + " 님이 [" + code + "] 방에 입장했어요!");
+
+    pushStatus();
+
+    if (!refDB) return;
+    try {
+        // 멤버 리스트 실시간 반영
+        refDB.ref('studyclub/' + code + '/users').on('value', function(s) {
+            drawUsers(s.exists() ? s.val() : {});
+        });
+
+        // 채팅 실시간 반영 (탭 무관하게 항상 로드, 표시는 탭에 따라)
+        refDB.ref('studyclub/' + code + '/chats').on('value', function(s) {
+            if (s.exists()) drawChats(s.val());
+        });
+
+        // 미디어 동기화
+        refDB.ref('studyclub/' + code + '/media').on('value', function(s) {
+            if (!s.exists()) return;
+            var d = s.val();
+            // 영상 로드 (videoId 바뀐 경우)
+            if (d.videoId) {
+                var cur = _ytPlayer && _ytPlayer.getVideoData ? _ytPlayer.getVideoData().video_id : null;
+                if (cur !== d.videoId) { syncMediaPlay(d); }
+                else { applyMediaState(d); }
+            }
+        });
+
+        // 새 멤버 입장 감지 → 채팅 알림
+        refDB.ref('studyclub/' + code + '/users').on('child_added', function(s) {
+            var u = s.val();
+            if (u && u.name && s.key !== myId) {
+                addSystemMessage("👋 " + u.name + " 님이 입장했어요!");
+            }
+        });
+
+        // 멤버 퇴장 감지 → 채팅 알림
+        refDB.ref('studyclub/' + code + '/users').on('child_removed', function(s) {
+            var u = s.val();
+            if (u && u.name) {
+                addSystemMessage("🚪 " + u.name + " 님이 퇴장했어요.");
+            }
+        });
+
+        // 리액션 실시간 수신
+        refDB.ref('studyclub/' + code + '/reactions').on('child_added', function(s) {
+            var r = s.val();
+            if (r && r.uid !== myId) spawnFloatingEmoji(r.emoji);
+        });
+
+        refDB.ref('studyclub/' + code + '/cat').on('value', function(s) {
+            if (s.exists()) {
+                roomCatData = s.val();
+            } else {
+                roomCatData = { name:['냥이','고양','미야','나비','야옹'][Math.floor(Math.random()*5)], lv:1, exp:0, hunger:80, happy:80, lastSave:Date.now() };
+                try { refDB.ref('studyclub/'+code+'/cat').set(roomCatData); } catch(e){}
+            }
+        });
+
+        // 공지 실시간 수신
+        refDB.ref('studyclub/' + code + '/notice').on('value', function(s) {
+            if (!s.exists()) return;
+            var n = s.val();
+            document.getElementById('noticeText').innerText = n.text;
+            document.getElementById('noticeBanner').style.display = 'block';
+            if (currentDdayTab === 'notice') {
+                document.getElementById('currentNoticeView').innerText = '📌 ' + n.text + '  — ' + n.by;
+            }
+        });
+
+        // 친구 신청 리스너
+        loadIncomingRequests();
+
+        // 브라우저 닫힐 때 자동 퇴장
+        window.addEventListener('beforeunload', function() {
+            if (activeRoom && refDB) {
+                try { refDB.ref('studyclub/' + activeRoom + '/users/' + myId).remove(); } catch(e) {}
+            }
+        });
+
+    } catch(e) {}
+}
+
+function addSystemMessage(text) {
+    roomChatMessages.push({ isSystem: true, text: text, t: 0 });
+    if (currentChatTab === 'room') renderCurrentTab();
+}
+
+function pushStatus() {
+    if (!activeRoom || !refDB) return;
+    try {
+        var statusEl = document.getElementById('statusMsg');
+        var statusVal = statusEl ? statusEl.value.trim() : '';
+        var userData = {
+            name:    myName,
+            subject: document.getElementById('studySubject').value || '',
+            time:    document.getElementById('timerDisplay').innerText || '00:00:00',
+            img:     myProfileImg || '',
+            goalSec: goalSeconds || 0,
+            memo:    (document.getElementById('memoText') && document.getElementById('memoText').value.slice(0,200)) || '',
+            ddays:   JSON.stringify(ddayList.slice(0,5)),
+        };
+        if (statusVal) userData.status = statusVal;
+        refDB.ref('studyclub/'+activeRoom+'/users/'+myId).set(userData);
+    } catch(e) {}
+}
+
+function setQuickStatus(text) {
+    var el = document.getElementById('statusMsg');
+    if (el) { el.value = text; pushStatus(); }
+}
+
+function drawUsers(users) {
+    var list = document.getElementById('memberList');
+    list.innerHTML = "";
+    var fb = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150';
+    var keys = Object.keys(users || {});
+
+    if (keys.length === 0) {
+        list.innerHTML = '<div style="color:#bbb;font-size:0.84rem;text-align:center;padding:10px;">방에 접속하면 멤버가 표시됩니다.</div>';
+        return;
+    }
+
+    // 멤버 수 표시
+    var countBadge = '<div style="font-size:0.78rem;color:var(--gui-dark-pink);text-align:right;margin-bottom:4px;flex-shrink:0;">👥 ' + keys.length + '명 접속 중</div>';
+    list.innerHTML = countBadge;
+
+    for (var id in users) {
+        var u = users[id];
+        var isMe = (id === myId);
+
+        // 공부 시간 파싱 → 분 단위 계산
+        var timeStr = u.time || '00:00:00';
+        var parts = timeStr.split(':');
+        var totalMin = 0;
+        if (parts.length === 3) {
+            totalMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+        var timeLabel = '';
+        if (totalMin === 0) {
+            var sec = parseInt(parts[2] || 0);
+            timeLabel = sec > 0 ? sec + '초' : '방금 시작';
+        } else if (totalMin < 60) {
+            timeLabel = totalMin + '분 공부 중';
+        } else {
+            var h = Math.floor(totalMin / 60);
+            var m = totalMin % 60;
+            timeLabel = h + '시간' + (m > 0 ? ' ' + m + '분' : '') + ' 공부 중';
+        }
+
+        list.innerHTML +=
+            '<div class="user-card" data-uid="' + id + '" style="cursor:' + (isMe?'default':'pointer') + ';' + (isMe ? 'border-color:var(--pink);background:var(--pink-light);' : '') + '">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<div style="position:relative;flex-shrink:0;">' +
+            '<img src="' + (u.img || fb) + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gui-pink);">' +
+            '<span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:#6bcb77;border-radius:50%;border:2px solid white;"></span>' +
+            '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:0.91rem;display:flex;align-items:center;gap:4px;">' +
+            u.name + (isMe ? ' <span style="font-size:0.65rem;background:var(--gui-dark-pink);color:white;padding:1px 5px;border-radius:5px;">나</span>' : '') +
+            '</div>' +
+            '<div style="font-size:0.72rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (u.subject || '공부 중') + '</div>' +
+            (u.status ? '<div style="font-size:0.7rem;color:var(--pink-dark);background:var(--pink-light);padding:1px 7px;border-radius:20px;display:inline-block;margin-top:2px;">' + u.status + '</div>' : '') +
+            '</div>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:4px;">' +
+            '<span style="font-size:0.70rem;color:#aaa;">⏱️</span>' +
+            '<span style="font-size:0.74rem;background:var(--text-main);color:#fff;padding:2px 9px;border-radius:6px;">' + timeStr + '</span>' +
+            '<span style="font-size:0.72rem;color:var(--gui-dark-pink);">(' + timeLabel + ')</span>' +
+            '</div>' +
+            '</div>';
+    }
+    // 각 카드에 클릭 이벤트 (나 제외)
+    list.querySelectorAll('.user-card[data-uid]').forEach(function(card) {
+        var uid = card.getAttribute('data-uid');
+        if (uid && uid !== myId) {
+            card.style.cursor = 'pointer';
+            card.onclick = function() { showMemberDetail(uid); };
+        }
+    });
+}
+
+function drawChats(chats) {
+    var systemMsgs = roomChatMessages.filter(function(m) { return m.isSystem; });
+    roomChatMessages = systemMsgs;
+    for (var k in chats) {
+        var ch = chats[k];
+        roomChatMessages.push({ name: ch.name, msg: ch.msg, t: ch.t, uid: ch.uid });
+    }
+    roomChatMessages.sort(function(a, b) { return (a.t || 0) - (b.t || 0); });
+    if (currentChatTab === 'room') renderCurrentTab();
+}
+
+// ══════════════════════════════════════════════
+//  유튜브 ★ 수정: nocookie 도메인 + 파라미터 강화
+//  file:// 에서도 브라우저가 iframe src 로드는 허용함
+//  단, autoplay는 크롬 정책상 muted 없이는 막힘 →
+//  autoplay 제거하고 controls만 제공 (사용자가 직접 재생)
+// ══════════════════════════════════════════════
+// shareMediaLink 새 버전은 아래에 정의됨
+
+function extractYouTubeId(url) {
+    try {
+        var u = new URL(url);
+        if (u.hostname === 'youtu.be') { return u.pathname.slice(1).split('?')[0]; }
+        var v = u.searchParams.get('v');
+        if (v) { return v; }
+        var s = u.pathname.match(/\/shorts\/([^\/\?]+)/i);
+        if (s) { return s[1]; }
+    } catch(e) {
+        // 11자리 ID 직접 입력
+        if (/^[a-zA-Z0-9_-]{11}$/.test(url)) { return url; }
+    }
+    return null;
+}
+
+var _ytPlayer = null;
+var _ytReady = false;
+var _ignoreStateChange = false;
+
+// YouTube IFrame API 로드
+function loadYouTubeAPI() {
+    if (window.YT) { _ytReady = true; return; }
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+}
+
+window.onYouTubeIframeAPIReady = function() {
+    _ytReady = true;
+};
+
+function syncMediaPlay(data) {
+    if (!data || !data.videoId) return;
+    var container = document.getElementById('videoContainer');
+    var placeholder = document.getElementById('videoPlaceholder');
+    if (placeholder) placeholder.style.display = 'none';
+
+    var currentId = _ytPlayer && _ytPlayer.getVideoData ? _ytPlayer.getVideoData().video_id : null;
+
+    if (window.YT && window.YT.Player && _ytReady) {
+        // IFrame API 사용 - 재생/정지 동기화 가능
+        container.innerHTML = '<div id="yt-iframe-holder"></div>';
+        _ytPlayer = new YT.Player('yt-iframe-holder', {
+            width: '100%', height: '100%',
+            videoId: data.videoId,
+            playerVars: { controls:1, rel:0, modestbranding:1, fs:1, autoplay: data.action==='pause'?0:1 },
+            events: {
+                onStateChange: function(e) {
+                    if (_ignoreStateChange || !activeRoom || !refDB) return;
+                    var state = e.data;
+                    if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED) {
+                        _ignoreStateChange = true;
+                        var action = state === YT.PlayerState.PLAYING ? 'play' : 'pause';
+                        var t = e.target.getCurrentTime ? e.target.getCurrentTime() : 0;
+                        try {
+                            refDB.ref('studyclub/'+activeRoom+'/media').update({
+                                action: action, seekTo: t, updatedBy: myId, t: Date.now()
+                            });
+                        } catch(err) {}
+                        setTimeout(function(){ _ignoreStateChange = false; }, 800);
+                    }
+                },
+                onReady: function(e) {
+                    if (data.action === 'pause') e.target.pauseVideo();
+                    else if (data.seekTo) e.target.seekTo(data.seekTo, true);
+                }
+            }
+        });
+        var holder = document.getElementById('yt-iframe-holder');
+        if (holder) holder.style.cssText = 'width:100%;height:100%;';
+    } else {
+        // fallback - 일반 iframe
+        var origin = window.location.origin || 'https://localhost';
+        var embedUrl = 'https://www.youtube.com/embed/' + data.videoId
+            + '?controls=1&rel=0&modestbranding=1&fs=1&enablejsapi=1';
+        container.innerHTML = '<iframe src="' + embedUrl + '"'
+            + ' allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;fullscreen"'
+            + ' allowfullscreen style="width:100%;height:100%;border:none;border-radius:10px;display:block;"></iframe>';
+    }
+}
+
+function applyMediaState(data) {
+    // 다른 사람이 재생/정지 했을 때 내 플레이어에 적용
+    if (!_ytPlayer || _ignoreStateChange) return;
+    if (data.updatedBy === myId) return; // 내가 바꾼 거면 무시
+    _ignoreStateChange = true;
+    try {
+        if (data.action === 'pause' && _ytPlayer.pauseVideo) {
+            _ytPlayer.pauseVideo();
+        } else if (data.action === 'play' && _ytPlayer.playVideo) {
+            if (data.seekTo) _ytPlayer.seekTo(data.seekTo, true);
+            _ytPlayer.playVideo();
+        }
+    } catch(e) {}
+    setTimeout(function(){ _ignoreStateChange = false; }, 800);
+}
+
+function changeYoutubeVolume(val) {
+    currentVol = val;
+    document.getElementById('volNum') && (document.getElementById('volNum').innerText = val);
+}
+
+// ══════════════════════════════════════════════
+//  타이머
+// ══════════════════════════════════════════════
+function runTimer() {
+    if (!clockTimer) {
+        clockTimer = setInterval(function(){
+            secondCounter++;
+            showTime();
+            pushStatus();
+            updateGoalUI();
+            // 오늘 누적 저장 (30초마다)
+            if (secondCounter % 30 === 0) {
+                var todayKey = new Date().toISOString().slice(0,10);
+                var prev = parseInt(localStorage.getItem('stat_today_sec_'+todayKey)||'0');
+                localStorage.setItem('stat_today_sec_'+todayKey, prev + 30);
+                updateTodayAccumDisplay();
+            }
+            if (secondCounter % 30 === 0 && currentStatTab === 'rank') renderRank();
+        }, 1000);
+    }
+}
+
+function updateTodayAccumDisplay() {
+    var todayKey = new Date().toISOString().slice(0,10);
+    var total = (parseInt(localStorage.getItem('stat_today_sec_'+todayKey)||'0')) + secondCounter;
+    var h = Math.floor(total/3600), m = Math.floor((total%3600)/60), s = total%60;
+    var el = document.getElementById('todayAccumDisplay');
+    if (el) el.innerText = h+'h '+m+'m '+s+'s';
+}
+function pauseTimer() { clearInterval(clockTimer); clockTimer = null; pushStatus(); }
+function clearTimer() { pauseTimer(); secondCounter = 0; showTime(); pushStatus(); }
+function showTime() {
+    var h = Math.floor(secondCounter/3600).toString().padStart(2,'0');
+    var m = Math.floor((secondCounter%3600)/60).toString().padStart(2,'0');
+    var s = (secondCounter%60).toString().padStart(2,'0');
+    document.getElementById('timerDisplay').innerText = h+':'+m+':'+s;
+}
+
+var _memoSaveTimer = null;
+function keepMemo() {
+    // 디바운스: 1초 후 저장 (타이핑 중엔 대기)
+    clearTimeout(_memoSaveTimer);
+    _memoSaveTimer = setTimeout(function() {
+        var el = document.getElementById('memoText');
+        if (el) {
+            localStorage.setItem('study_memo_data', el.value);
+            // 저장 표시 (살짝)
+            var saved = document.getElementById('memoSavedBadge');
+            if (saved) { saved.style.opacity='1'; setTimeout(function(){ saved.style.opacity='0'; },1200); }
+        }
+    }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  채팅
+// ══════════════════════════════════════════════
+function pushChat() {
+    var input = document.getElementById('chatInput');
+    var msg = input.value.trim();
+    if (!msg) return;
+
+    if (currentChatTab === 'room') {
+        // 방 전체채팅 → Firebase에 올리면 drawChats()가 자동으로 화면에 표시
+        if (!activeRoom || !refDB) {
+            alert("방에 먼저 입장해 주세요!");
+            return;
+        }
+        try {
+            refDB.ref('studyclub/' + activeRoom + '/chats').push().set({
+                name: myName,
+                msg: msg,
+                t: Date.now()
+            });
+        } catch(e) {}
+    } else {
+        // 1:1 DM → 로컬에만 저장, 바로 화면에 표시
+        var dmTarget = activeDMTarget || '상대방';
+        dmChatMessages.push({ name: myName, msg: msg, isDM: true, target: dmTarget });
+        renderCurrentTab();
+    }
+
+    input.value = "";
+}
+
+function switchChatTab(type) {
+    currentChatTab = type;
+    document.getElementById('tabRoom').className = 'tab-btn ' + (type === 'room' ? 'tab-on' : 'tab-off');
+    document.getElementById('tabDM').className   = 'tab-btn ' + (type === 'dm'   ? 'tab-on' : 'tab-off');
+
+    // placeholder 변경
+    var input = document.getElementById('chatInput');
+    if (type === 'room') {
+        input.placeholder = '방 전체에게 메시지...';
+    } else {
+        input.placeholder = (activeDMTarget || '친구') + ' 에게 DM...';
+    }
+
+    renderCurrentTab();
+}
+
+function renderCurrentTab() {
+    var screen = document.getElementById('chatScreen');
+    screen.innerHTML = '';
+
+    if (currentChatTab === 'room') {
+        // 시스템 메시지 먼저
+        roomChatMessages.forEach(function(m) {
+            var div = document.createElement('div');
+            if (m.isSystem) {
+                div.className = 'chat-line system-msg';
+                div.style.cssText = 'text-align:center;color:#ff5394;font-size:0.82rem;background:var(--gui-bubble);border-radius:8px;padding:4px 8px;border:none;';
+                div.innerText = m.text;
+            } else {
+                div.className = 'chat-line';
+                var nameSpan = document.createElement('span');
+                nameSpan.className = 'chat-user';
+                nameSpan.textContent = m.name;
+                div.appendChild(nameSpan);
+                div.appendChild(document.createTextNode(': ' + m.msg));
+            }
+            screen.appendChild(div);
+        });
+    } else {
+        // DM 탭
+        if (dmChatMessages.length === 0) {
+            screen.innerHTML = '<div style="color:#bbb;font-size:0.82rem;text-align:center;padding:12px;">💌 친구 목록에서 DM 상대를 선택하세요</div>';
+        } else {
+            dmChatMessages.forEach(function(m) {
+                var div = document.createElement('div');
+                div.className = 'chat-line';
+                var isMe = (m.name === myName);
+                div.style.cssText = isMe
+                    ? 'text-align:right;'
+                    : 'text-align:left;';
+                var bubble = '<span style="display:inline-block;background:' +
+                    (isMe ? 'var(--gui-pink);color:white;' : '#f0f0f0;color:#333;') +
+                    'padding:3px 10px;border-radius:12px;font-size:0.88rem;max-width:80%;">' +
+                    (isMe ? '' : '<b style="color:var(--gui-dark-pink);font-size:0.78rem;display:block;">' + m.name + '</b>') +
+                    m.msg + '</span>';
+                div.innerHTML = bubble;
+                screen.appendChild(div);
+            });
+        }
+    }
+    screen.scrollTop = screen.scrollHeight;
+}
+
+// ══════════════════════════════════════════════
+//  친구
+// ══════════════════════════════════════════════
+function sendFriendRequest() {
+    var input = document.getElementById('friendSearchInput');
+    var tag = input.value.trim();
+    if (!tag.includes('#')) { alert("유저명#코드 형태로 입력해 주세요!"); return; }
+    if (!mySentRequests.includes(tag)) {
+        mySentRequests.push(tag);
+        localStorage.setItem('my_sent_requests', JSON.stringify(mySentRequests));
+        setTimeout(function() {
+            if (!myFriends.includes(tag)) {
+                myFriends.push(tag);
+                localStorage.setItem('my_friends_list', JSON.stringify(myFriends));
+                renderFriendsUI();
+            }
+        }, 1000);
+    }
+    alert("📥 ["+tag+"] 님에게 친구 요청을 발송했습니다.");
+    input.value = "";
+    renderFriendsUI();
+}
+
+function renderFriendsUI() {
+    var sv = document.getElementById('sentRequestsView');
+    if (sv) { sv.innerText = mySentRequests.length === 0 ? (langPack[currentLang]||langPack.ko).txt_none : mySentRequests.join(', '); }
+    var lv = document.getElementById('friendsListView');
+    if (!lv) return;
+    lv.innerHTML = "";
+    if (myFriends.length === 0) {
+        lv.innerHTML = '<span style="font-size:0.82rem;color:#bbb;">등록된 친구가 없습니다.</span>';
+    } else {
+        myFriends.forEach(function(f) {
+            lv.innerHTML +=
+                '<div onclick="startDM(\''+f+'\')" style="background:var(--gui-bubble);padding:6px 10px;border-radius:10px;border:1.5px solid var(--gui-pink);cursor:pointer;font-size:0.86rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+                '<span>👤 '+f+'</span>' +
+                '<span style="font-size:0.72rem;background:var(--gui-dark-pink);color:white;padding:2px 7px;border-radius:6px;">💬 DM</span>' +
+                '</div>';
+        });
+    }
+}
+
+function startDM(tag) {
+    activeDMTarget = tag;
+    switchChatTab('dm');
+    var input = document.getElementById('chatInput');
+    if (input) input.placeholder = tag + ' 에게 DM...';
+}
+
+// ══════════════════════════════════════════════
+//  스티커
+// ══════════════════════════════════════════════
+function uploadSticker(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) { createResizableSticker('st_'+Math.random().toString(36).substring(2,9), e.target.result, 260, 460); };
+    reader.readAsDataURL(file);
+}
+
+function createResizableSticker(id, src, top, left) {
+    var div = document.createElement('div');
+    div.className = 'sticker'; div.id = id;
+    div.style.cssText = 'top:'+top+'px;left:'+left+'px;width:120px;';
+    div.innerHTML =
+        '<div class="sticker-del" onclick="this.parentElement.remove()">✕</div>' +
+        '<img src="'+src+'">' +
+        '<div style="width:100%;display:flex;align-items:center;gap:3px;margin-top:4px;">' +
+        '<span style="font-size:0.6rem;color:#999;">크기</span>' +
+        '<input type="range" style="width:100%;" min="50" max="300" value="120" oninput="resizeSticker(\''+id+'\',this.value)">' +
+        '</div>';
+    document.body.appendChild(div);
+    var p1=0,p2=0,p3=0,p4=0;
+    div.onmousedown = function(e) {
+        if (e.target.tagName==='INPUT'||e.target.className==='sticker-del') return;
+        p3=e.clientX; p4=e.clientY;
+        document.onmouseup = function(){ document.onmouseup=null; document.onmousemove=null; };
+        document.onmousemove = function(e){
+            p1=p3-e.clientX; p2=p4-e.clientY; p3=e.clientX; p4=e.clientY;
+            div.style.top=(div.offsetTop-p2)+'px'; div.style.left=(div.offsetLeft-p1)+'px';
+        };
+    };
+}
+function resizeSticker(id,val){ var el=document.getElementById(id); if(el) el.style.width=val+'px'; }
+
+
+// ══════════════════════════════════════════════
+//  목표 설정
+// ══════════════════════════════════════════════
+let goalSeconds = 0;
+let goalAchieved = false;
+
+function setGoal() {
+    var h = parseInt(document.getElementById('goalHour').value) || 0;
+    var m = parseInt(document.getElementById('goalMin').value) || 0;
+    goalSeconds = (h * 3600) + (m * 60);
+    goalAchieved = false;
+    if (goalSeconds === 0) { document.getElementById('goalProgress').innerText = '목표를 설정해 주세요!'; return; }
+    updateGoalUI();
+}
+
+function updateGoalUI() {
+    if (goalSeconds === 0) return;
+    var pct = Math.min(100, Math.round((secondCounter / goalSeconds) * 100));
+    document.getElementById('goalBar').style.width = pct + '%';
+    var remain = goalSeconds - secondCounter;
+    if (remain <= 0) {
+        document.getElementById('goalProgress').innerText = '🎉 목표 달성! 대단해요!';
+        if (!goalAchieved) { goalAchieved = true; showGoalCelebration(); }
+    } else {
+        var rh = Math.floor(remain/3600), rm = Math.floor((remain%3600)/60), rs = remain%60;
+        document.getElementById('goalProgress').innerText =
+            pct + '% 달성 · 남은 시간 ' + (rh>0?rh+'h ':'') + rm + 'm ' + rs + 's';
+    }
+}
+
+function showGoalCelebration() {
+    var banner = document.getElementById('goalBanner');
+    var h = Math.floor(goalSeconds/3600), m = Math.floor((goalSeconds%3600)/60);
+    document.getElementById('goalBannerMsg').innerText = (h>0?h+'시간 ':'') + (m>0?m+'분':'') + ' 공부 완료! 정말 대단해요 ✨';
+    banner.style.display = 'block';
+    // 색종이
+    var colors = ['#ff8ebb','#ffd93d','#6bcb77','#ff6b6b','#74b9ff','#a29bfe'];
+    for (var i = 0; i < 60; i++) {
+        (function(i) {
+            setTimeout(function() {
+                var el = document.createElement('div');
+                el.className = 'confetti-piece';
+                el.style.cssText = 'left:'+Math.random()*100+'vw;top:0;background:'+colors[Math.floor(Math.random()*colors.length)]+';transform:rotate('+Math.random()*360+'deg);';
+                el.style.animationDuration = (1.5 + Math.random()) + 's';
+                document.body.appendChild(el);
+                setTimeout(function(){ el.remove(); }, 3000);
+            }, i * 40);
+        })(i);
+    }
+}
+
+// ══════════════════════════════════════════════
+//  뽀모도로
+// ══════════════════════════════════════════════
+let pomoTimer = null;
+let pomoSeconds = 25 * 60;
+let pomoIsWork = true;
+let pomoCycle = 0;
+
+function startPomo() {
+    if (pomoTimer) return;
+    var badge = document.getElementById('pomoBadge');
+    badge.style.display = 'inline-block';
+    badge.className = 'pomo-work';
+    badge.innerText = '공부 중 🔴';
+    pomoTimer = setInterval(function() {
+        pomoSeconds--;
+        var m = Math.floor(pomoSeconds/60), s = pomoSeconds%60;
+        document.getElementById('pomoDisplay').innerText =
+            m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
+        if (pomoSeconds <= 0) {
+            pomoCycle++;
+            pomoIsWork = !pomoIsWork;
+            pomoSeconds = pomoIsWork ? 25*60 : (pomoCycle%4===0 ? 15*60 : 5*60);
+            badge.className = pomoIsWork ? 'pomo-work' : 'pomo-break';
+            badge.innerText = pomoIsWork ? '공부 중 🔴' : '휴식 중 🟢';
+            // 전환 알림 채팅
+            var msg = pomoIsWork ? '🍅 뽀모도로 시작! 집중하세요!' : (pomoCycle%4===0 ? '☕ 긴 휴식 (15분)' : '🌿 짧은 휴식 (5분)');
+            addSystemMessage(msg);
+        }
+    }, 1000);
+}
+
+function stopPomo() {
+    clearInterval(pomoTimer); pomoTimer = null;
+    pomoSeconds = 25*60; pomoIsWork = true; pomoCycle = 0;
+    document.getElementById('pomoDisplay').innerText = '25:00';
+    document.getElementById('pomoBadge').style.display = 'none';
+}
+
+// ══════════════════════════════════════════════
+//  리액션 이모지
+// ══════════════════════════════════════════════
+function sendReaction(emoji) {
+    spawnFloatingEmoji(emoji);
+    // 방에 있으면 Firebase로 브로드캐스트
+    if (activeRoom && refDB) {
+        try {
+            refDB.ref('studyclub/' + activeRoom + '/reactions').push().set({
+                emoji: emoji, uid: myId, t: Date.now()
+            });
+            // 3초 후 자동 삭제
+            setTimeout(function() {
+                refDB.ref('studyclub/' + activeRoom + '/reactions').orderByChild('t')
+                    .endAt(Date.now() - 4000).once('value', function(s) {
+                        s.forEach(function(c) { c.ref.remove(); });
+                    });
+            }, 4000);
+        } catch(e) {}
+    }
+}
+
+function spawnFloatingEmoji(emoji) {
+    var el = document.createElement('div');
+    el.className = 'floating-emoji';
+    el.innerText = emoji;
+    el.style.cssText = 'left:' + (20 + Math.random()*60) + 'vw;bottom:20vh;font-size:' + (1.8+Math.random()*1.4) + 'rem;';
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 3200);
+}
+
+// ══════════════════════════════════════════════
+//  통계 & 랭킹
+// ══════════════════════════════════════════════
+let currentStatTab = 'stats';
+
+function switchStatTab(tab) {
+    currentStatTab = tab;
+    document.getElementById('tabStats').className = 'tab-btn ' + (tab==='stats'?'tab-on':'tab-off');
+    document.getElementById('tabRank').className  = 'tab-btn ' + (tab==='rank' ?'tab-on':'tab-off');
+    document.getElementById('statsView').style.display = tab==='stats' ? 'block' : 'none';
+    document.getElementById('rankView').style.display  = tab==='rank'  ? 'block' : 'none';
+    if (tab==='stats') renderStats();
+    if (tab==='rank')  renderRank();
+}
+
+function renderStats() {
+    var todayKey = new Date().toISOString().slice(0,10);
+    // 오늘 누적 저장
+    var todaySec = (parseInt(localStorage.getItem('stat_today_sec_'+todayKey))||0) + secondCounter;
+    localStorage.setItem('stat_today_sec_'+todayKey, todaySec);
+
+    // 이번 주 7일
+    var weekData = [];
+    for (var i=6;i>=0;i--) {
+        var d = new Date(); d.setDate(d.getDate()-i);
+        var k = d.toISOString().slice(0,10);
+        var sec = parseInt(localStorage.getItem('stat_today_sec_'+k))||0;
+        weekData.push({ label: (d.getMonth()+1)+'/'+(d.getDate()), sec: sec });
+    }
+    var maxSec = Math.max(1, Math.max.apply(null, weekData.map(function(d){return d.sec;})));
+    var todayMin = Math.floor(secondCounter/60);
+    var html = '<div style="font-size:0.8rem;color:var(--gui-dark-pink);margin-bottom:6px;">📅 이번 주 공부 시간</div>';
+    weekData.forEach(function(d) {
+        var pct = Math.round((d.sec/maxSec)*100);
+        var min = Math.floor(d.sec/60);
+        html += '<div class="stat-bar-wrap"><span style="width:32px;text-align:right;flex-shrink:0;">'+d.label+'</span>' +
+            '<div class="stat-bar-bg"><div class="stat-bar-fill" style="width:'+pct+'%"></div></div>' +
+            '<span style="width:38px;text-align:right;flex-shrink:0;color:#888;">'+(min>=60?(Math.floor(min/60)+'h'+(min%60?min%60+'m':'')):(min+'m'))+'</span></div>';
+    });
+    html += '<div style="margin-top:8px;font-size:0.8rem;color:#aaa;">⏱️ 오늘 현재 세션: '+todayMin+'분</div>';
+    document.getElementById('statsView').innerHTML = html;
+}
+
+function renderRank() {
+    var rv = document.getElementById('rankView');
+    if (!rv) return;
+    if (!activeRoom || !refDB) {
+        rv.innerHTML = '<div style="color:var(--text-muted);font-size:0.84rem;text-align:center;padding:20px;">🏠 방에 입장하면 랭킹이 표시돼요!</div>';
+        return;
+    }
+    rv.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:10px;">불러오는 중...</div>';
+    try {
+        refDB.ref('studyclub/'+activeRoom+'/users').once('value', function(s) {
+            if (!s.exists()) {
+                rv.innerHTML = '<div style="color:var(--text-muted);font-size:0.84rem;text-align:center;padding:20px;">멤버가 없어요.</div>';
+                return;
+            }
+            var users = [];
+            s.forEach(function(child) {
+                var u = child.val();
+                if (u && u.name) users.push(u);
+            });
+            // 시간 파싱 (time 없는 경우 0으로)
+            function toSec(t) {
+                if (!t) return 0;
+                var p = t.split(':');
+                if (p.length < 3) return 0;
+                return (parseInt(p[0])||0)*3600 + (parseInt(p[1])||0)*60 + (parseInt(p[2])||0);
+            }
+            users.sort(function(a,b){ return toSec(b.time) - toSec(a.time); });
+            var medals = ['🥇','🥈','🥉'];
+            var html = '<div style="font-size:0.78rem;font-weight:700;color:var(--pink-dark);margin-bottom:8px;letter-spacing:0.5px;">🏆 오늘의 공부왕</div>';
+            users.forEach(function(u, i) {
+                var isMe = (u.name === myName);
+                var sec = toSec(u.time);
+                var h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), ss = sec%60;
+                var timeStr = u.time || '00:00:00';
+                html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;' +
+                    'background:' + (isMe ? 'var(--pink-light)' : 'rgba(255,255,255,0.6)') + ';' +
+                    'border:1px solid ' + (isMe ? 'var(--pink)' : 'var(--border)') + ';' +
+                    'border-radius:var(--radius-sm);margin-bottom:4px;">' +
+                    '<span style="font-size:1.2rem;width:28px;text-align:center;">' + (medals[i]||'<span style="font-size:0.8rem;color:var(--text-muted);">'+(i+1)+'위</span>') + '</span>' +
+                    '<img src="' + (u.img||'') + '" onerror="this.style.display=\'none\'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">' +
+                    '<span style="flex:1;font-size:0.88rem;font-weight:' + (isMe?'700':'500') + ';">' + (u.name||'') + (isMe?' <span style="font-size:0.65rem;background:var(--pink);color:white;padding:1px 5px;border-radius:10px;">나</span>':'') + '</span>' +
+                    '<span style="font-size:0.78rem;background:var(--text-main);color:#fff;padding:3px 10px;border-radius:20px;font-weight:700;">' + timeStr + '</span>' +
+                    '</div>';
+            });
+            rv.innerHTML = html;
+        });
+    } catch(e) {
+        rv.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:10px;">불러오기 실패</div>';
+    }
+}
+
+// ══════════════════════════════════════════════
+//  D-Day
+// ══════════════════════════════════════════════
+let ddayList = JSON.parse(localStorage.getItem('dday_list')||'[]');
+let currentDdayTab = 'dday';
+
+function switchDdayTab(tab) {
+    currentDdayTab = tab;
+    document.getElementById('tabDday').className   = 'tab-btn ' + (tab==='dday'  ?'tab-on':'tab-off');
+    document.getElementById('tabNotice').className = 'tab-btn ' + (tab==='notice'?'tab-on':'tab-off');
+    var dp = document.getElementById('ddayPanel');
+    var np = document.getElementById('noticePanel');
+    if (dp) { dp.style.display = tab==='dday' ? 'flex' : 'none'; dp.style.flexDirection='column'; }
+    if (np) { np.style.display = tab==='notice' ? 'flex' : 'none'; np.style.flexDirection='column'; }
+    if (tab==='notice') loadNotice();
+}
+
+function addDday() {
+    var labelEl = document.getElementById('ddayLabel');
+    var dateEl  = document.getElementById('ddayDate');
+    if (!labelEl || !dateEl) return;
+    var label = labelEl.value.trim();
+    var date  = dateEl.value;
+    if (!label) { labelEl.focus(); labelEl.style.borderColor='var(--pink-dark)'; setTimeout(function(){ labelEl.style.borderColor=''; },1500); return; }
+    if (!date)  { dateEl.focus();  dateEl.style.borderColor='var(--pink-dark)';  setTimeout(function(){ dateEl.style.borderColor=''; },1500);  return; }
+    ddayList.push({ label:label, date:date });
+    localStorage.setItem('dday_list', JSON.stringify(ddayList));
+    labelEl.value = '';
+    dateEl.value  = '';
+    renderDday();
+    showToast('📅 D-Day가 추가됐어요!');
+}
+
+function renderDday() {
+    var el = document.getElementById('ddayList');
+    if (!el) return;
+    var today = new Date(); today.setHours(0,0,0,0);
+    if (ddayList.length === 0) {
+        el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:16px;">D-Day를 추가해 보세요! 📅</div>';
+        return;
+    }
+    // D-Day 기준 정렬 (가까운 것 먼저, 지난 것 맨 뒤)
+    var sorted = ddayList.map(function(item, i){ return {item:item, i:i}; }).sort(function(a,b){
+        var da = new Date(a.item.date) - today;
+        var db = new Date(b.item.date) - today;
+        // 남은 것 먼저, 지난 것 뒤로
+        if (da >= 0 && db < 0) return -1;
+        if (da < 0 && db >= 0) return 1;
+        return Math.abs(da) - Math.abs(db);
+    });
+    var html = '';
+    sorted.forEach(function(obj) {
+        var item = obj.item, i = obj.i;
+        var target = new Date(item.date); target.setHours(0,0,0,0);
+        var diff = Math.round((target - today) / 86400000);
+        var isPast = diff < 0;
+        var isToday = diff === 0;
+        var isUrgent = diff > 0 && diff <= 7;
+        var badge = isToday ? 'D-Day! 🎉' : diff > 0 ? 'D-'+diff : 'D+'+Math.abs(diff);
+        var badgeColor = isToday ? 'var(--pink-dark)' : isPast ? 'var(--text-muted)' : isUrgent ? '#ef4444' : 'var(--pink-dark)';
+        var badgeBg    = isToday ? 'var(--pink-light)' : isPast ? '#f3f4f6' : isUrgent ? '#fee2e2' : 'var(--pink-light)';
+        html += '<div style="display:flex;align-items:center;gap:8px;' +
+            'background:' + (isPast ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.7)') + ';' +
+            'padding:8px 10px;border-radius:var(--radius-sm);' +
+            'border:1px solid ' + (isToday ? 'var(--pink)' : 'var(--border)') + ';' +
+            'opacity:' + (isPast ? '0.5' : '1') + ';">' +
+            '<div style="flex:1;">' +
+                '<div style="font-size:0.88rem;font-weight:' + (isToday?'700':'500') + ';">' + item.label + '</div>' +
+                '<div style="font-size:0.7rem;color:var(--text-muted);">' + item.date + '</div>' +
+            '</div>' +
+            '<span style="font-size:0.82rem;font-weight:700;color:' + badgeColor + ';' +
+                'background:' + badgeBg + ';padding:3px 10px;border-radius:20px;white-space:nowrap;">' + badge + '</span>' +
+            '<span onclick="removeDday('+i+')" style="cursor:pointer;color:var(--text-muted);font-size:0.8rem;padding:2px 4px;border-radius:4px;" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1">✕</span>' +
+            '</div>';
+    });
+    el.innerHTML = html;
+}
+
+function removeDday(i) {
+    ddayList.splice(i,1);
+    localStorage.setItem('dday_list', JSON.stringify(ddayList));
+    renderDday();
+}
+
+// ══════════════════════════════════════════════
+//  방 공지
+// ══════════════════════════════════════════════
+function postNotice() {
+    if (!activeRoom || !refDB) { showToast('방에 먼저 입장해 주세요!'); return; }
+    var el = document.getElementById('noticeInput');
+    if (!el) return;
+    var text = el.value.trim();
+    if (!text) return;
+    try {
+        refDB.ref('studyclub/'+activeRoom+'/notice').set({ text:text, by:myName, t:Date.now() });
+        el.value = '';
+        showToast('📢 공지가 등록됐어요!');
+    } catch(e) { showToast('공지 등록 실패: ' + e.message); }
+}
+
+function loadNotice() {
+    var cv = document.getElementById('currentNoticeView');
+    if (!cv) return;
+    if (!activeRoom || !refDB) {
+        cv.innerHTML = '<span style="color:var(--text-muted);font-size:0.82rem;">방에 입장하면 공지를 볼 수 있어요.</span>';
+        return;
+    }
+    refDB.ref('studyclub/'+activeRoom+'/notice').on('value', function(s) {
+        if (!s.exists()) {
+            cv.innerHTML = '<span style="color:var(--text-muted);font-size:0.82rem;">등록된 공지가 없어요.</span>';
+            return;
+        }
+        var n = s.val();
+        cv.innerHTML = '<div style="background:var(--pink-light);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;">' +
+            '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px;">📌 ' + (n.by||'') + ' · ' + (n.t ? new Date(n.t).toLocaleDateString() : '') + '</div>' +
+            '<div style="font-size:0.88rem;">' + n.text + '</div></div>';
+        var nb = document.getElementById('noticeBanner');
+        var nt = document.getElementById('noticeText');
+        if (nt) nt.innerText = n.text;
+        if (nb) nb.style.display = 'block';
+    });
+}
+
+// ══════════════════════════════════════════════
+//  유튜브 동기화 개선 (재생/일시정지 공유)
+// ══════════════════════════════════════════════
+function shareMediaLink() {
+    var urlInput = document.getElementById('mediaUrlInput').value.trim();
+    if (!urlInput) { alert('유튜브 영상 주소를 입력해 주세요!'); return; }
+    var videoId = extractYouTubeId(urlInput);
+    if (!videoId || videoId.length < 6) { alert('올바른 유튜브 주소를 입력해 주세요!'); return; }
+    var data = { videoId: videoId, action: 'play', seekTo: 0, updatedBy: myId, t: Date.now() };
+    if (activeRoom && refDB) {
+        try { refDB.ref('studyclub/'+activeRoom+'/media').set(data); } catch(e) {}
+    }
+    syncMediaPlay(data);
+    document.getElementById('mediaUrlInput').value = '';
+}
+
+
+
+// ══════════════════════════════════════════════
+//  테마 스킨
+// ══════════════════════════════════════════════
+var themeNames = ['pink','dark','mint','lavender','sky'];
+function applyTheme(name) {
+    themeNames.forEach(function(t){ document.body.classList.remove('theme-'+t); });
+    if (name !== 'pink') document.body.classList.add('theme-'+name);
+    localStorage.setItem('app_theme', name);
+}
+(function(){ applyTheme(localStorage.getItem('app_theme')||'pink'); })();
+
+// ══════════════════════════════════════════════
+//  집중 모드
+// ══════════════════════════════════════════════
+var focusActive = false;
+var focusInterval = null;
+function toggleFocusMode() {
+    focusActive = !focusActive;
+    var overlay = document.getElementById('focusOverlay');
+    overlay.classList.toggle('active', focusActive);
+    if (focusActive) {
+        // 타이머 자동 시작
+        runTimer();
+        document.addEventListener('keydown', exitFocusOnEsc);
+        // timerDisplay를 직접 읽지 말고 secondCounter로 직접 렌더
+        focusInterval = setInterval(function() {
+            var h = Math.floor(secondCounter/3600).toString().padStart(2,'0');
+            var m = Math.floor((secondCounter%3600)/60).toString().padStart(2,'0');
+            var s = (secondCounter%60).toString().padStart(2,'0');
+            document.getElementById('focusTimerBig').innerText = h+':'+m+':'+s;
+            var subj = document.getElementById('studySubject');
+            if (subj) document.getElementById('focusSubject').innerText = subj.value || '';
+        }, 200);
+    } else {
+        document.removeEventListener('keydown', exitFocusOnEsc);
+        clearInterval(focusInterval);
+        focusInterval = null;
+    }
+}
+function exitFocusOnEsc(e){ if(e.key==='Escape') toggleFocusMode(); }
+
+// ══════════════════════════════════════════════
+//  뽀모도로 커스텀 프리셋
+// ══════════════════════════════════════════════
+function setPomoPreset(work, brk) {
+    document.getElementById('pomoWorkMin').value  = work;
+    document.getElementById('pomoBreakMin').value = brk;
+    if (pomoTimer) stopPomo();
+    pomoSeconds = work * 60;
+    var m = Math.floor(pomoSeconds/60), s = pomoSeconds%60;
+    document.getElementById('pomoDisplay').innerText = m.toString().padStart(2,'0')+':'+s.toString().padStart(2,'0');
+}
+
+// ── startPomo 교체 (커스텀 시간 반영) ──
+function startPomo() {
+    if (pomoTimer) return;
+    var workMin  = parseInt(document.getElementById('pomoWorkMin').value)  || 25;
+    var breakMin = parseInt(document.getElementById('pomoBreakMin').value) || 5;
+    pomoSeconds = pomoIsWork ? workMin*60 : breakMin*60;
+    var badge = document.getElementById('pomoBadge');
+    badge.style.display = 'inline-block';
+    badge.className = 'pomo-work';
+    badge.innerText = (langPack[currentLang]&&langPack[currentLang].pomo_work_badge)||'집중 🔴';
+    pomoTimer = setInterval(function() {
+        pomoSeconds--;
+        var m = Math.floor(pomoSeconds/60), s = pomoSeconds%60;
+        document.getElementById('pomoDisplay').innerText = m.toString().padStart(2,'0')+':'+s.toString().padStart(2,'0');
+        if (pomoSeconds <= 0) {
+            pomoCycle++;
+            pomoIsWork = !pomoIsWork;
+            var wm = parseInt(document.getElementById('pomoWorkMin').value)||25;
+            var bm = parseInt(document.getElementById('pomoBreakMin').value)||5;
+            pomoSeconds = pomoIsWork ? wm*60 : (pomoCycle%4===0 ? bm*3*60 : bm*60);
+            badge.className = pomoIsWork ? 'pomo-work' : 'pomo-break';
+            badge.innerText = pomoIsWork ? ((langPack[currentLang]&&langPack[currentLang].pomo_work_badge)||'집중 🔴') : ((langPack[currentLang]&&langPack[currentLang].pomo_break_badge)||'휴식 🟢');
+            var msg = pomoIsWork ? '🍅 집중 시작! 화이팅!' : (pomoCycle%4===0 ? '☕ 긴 휴식!' : '🌿 짧은 휴식!');
+            addSystemMessage(msg);
+            playPomoChime(pomoIsWork);
+        }
+    }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  시계
+// ══════════════════════════════════════════════
+var clockTab = 'analog';
+var clockTzList = JSON.parse(localStorage.getItem('clock_tzlist')||'["Asia/Seoul","Asia/Tokyo","America/New_York"]');
+
+function switchClockTab(tab) {
+    clockTab = tab;
+    document.getElementById('tabAnalog').className  = 'tab-btn '+(tab==='analog' ?'tab-on':'tab-off');
+    document.getElementById('tabDigital').className = 'tab-btn '+(tab==='digital'?'tab-on':'tab-off');
+    document.getElementById('analogClockPanel').style.display  = tab==='analog' ?'flex':'none';
+    document.getElementById('digitalClockPanel').style.display = tab==='digital'?'flex':'none';
+}
+
+function addClockTz() {
+    var tz = document.getElementById('tzSelect').value;
+    if (!clockTzList.includes(tz)) {
+        clockTzList.push(tz);
+        localStorage.setItem('clock_tzlist', JSON.stringify(clockTzList));
+    }
+}
+
+function removeClockTz(tz) {
+    clockTzList = clockTzList.filter(function(t){ return t!==tz; });
+    localStorage.setItem('clock_tzlist', JSON.stringify(clockTzList));
+}
+
+function drawAnalogClock() {
+    var canvas = document.getElementById('analogClock');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var W=canvas.width, H=canvas.height, cx=W/2, cy=H/2, r=cx-8;
+    var now = new Date();
+    var h=now.getHours()%12, m=now.getMinutes(), s=now.getSeconds();
+    var style = getComputedStyle(document.documentElement);
+    var pink = style.getPropertyValue('--gui-pink').trim()||'#ff8ebb';
+    var dark = style.getPropertyValue('--gui-dark-pink').trim()||'#ff5394';
+    var text = style.getPropertyValue('--text-main').trim()||'#4d1c34';
+
+    ctx.clearRect(0,0,W,H);
+    // 배경
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,240,245,0.95)'; ctx.fill();
+    ctx.strokeStyle=dark; ctx.lineWidth=3; ctx.stroke();
+    // 눈금
+    for(var i=0;i<12;i++){
+        var a=i*Math.PI/6-Math.PI/2;
+        var isMaj=(i%3===0);
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(a)*(r-(isMaj?14:8)),cy+Math.sin(a)*(r-(isMaj?14:8)));
+        ctx.lineTo(cx+Math.cos(a)*(r-2),cy+Math.sin(a)*(r-2));
+        ctx.strokeStyle=isMaj?dark:pink; ctx.lineWidth=isMaj?3:1.5; ctx.stroke();
+    }
+    // 침
+    function hand(angle,len,w,color){
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.lineTo(cx+Math.cos(angle-Math.PI/2)*len, cy+Math.sin(angle-Math.PI/2)*len);
+        ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineCap='round'; ctx.stroke();
+    }
+    hand((h+m/60)*Math.PI/6, r*0.52, 5, text);
+    hand((m+s/60)*Math.PI/30, r*0.72, 3.5, dark);
+    hand(s*Math.PI/30, r*0.8, 1.5, '#ff6b6b');
+    // 중심
+    ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fillStyle=dark; ctx.fill();
+}
+
+function renderDigitalClocks() {
+    var now = new Date();
+    var html = '';
+    clockTzList.forEach(function(tz) {
+        try {
+            var timeStr = now.toLocaleTimeString('ko-KR',{timeZone:tz,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+            var label = tz.split('/').pop().replace('_',' ');
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--gui-bubble);padding:5px 10px;border-radius:10px;border:1.5px solid var(--gui-pink);">'+
+                '<span style="font-size:0.8rem;color:var(--gui-dark-pink);">🌏 '+label+'</span>'+
+                '<span style="font-size:1.1rem;letter-spacing:2px;">'+timeStr+'</span>'+
+                '<span onclick="removeClockTz(\''+tz+'\')" style="cursor:pointer;color:#ccc;font-size:0.8rem;">✕</span></div>';
+        } catch(e){}
+    });
+    var el = document.getElementById('digitalClockList');
+    if (el) el.innerHTML = html;
+}
+
+setInterval(function(){
+    drawAnalogClock();
+    renderDigitalClocks();
+}, 1000);
+drawAnalogClock();
+renderDigitalClocks();
+
+
+
+// ══════════════════════════════════════════════
+//  사이드바
+// ══════════════════════════════════════════════
+var sidebarOpen = false;
+function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+    document.getElementById('appSidebar').classList.toggle('open', sidebarOpen);
+    document.getElementById('sidebarIcon').innerText = sidebarOpen ? '✕' : '☰';
+}
+
+// ══════════════════════════════════════════════
+//  창 메뉴 토글
+// ══════════════════════════════════════════════
+var winVisible = {};
+var allWinIds = ['win-profile','win-memo','win-timer','win-chat','win-members',
+                 'win-media','win-friends','win-goal','win-stats','win-dday','win-clock'];
+
+function toggleWindow(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var isHidden = (el.style.display === 'none' || el.style.display === '');
+    if (isHidden) {
+        el.style.display = 'flex';
+        el.style.flexDirection = 'column';
+    } else {
+        el.style.display = 'none';
+    }
+    // 사이드바 버튼 상태 업데이트
+    var sbBtn = document.querySelector('.sb-btn[data-win="'+id+'"]');
+    if (sbBtn) {
+        if (isHidden) {
+            sbBtn.classList.remove('sb-hidden');
+            sbBtn.classList.add('sb-active');
+        } else {
+            sbBtn.classList.remove('sb-active');
+            // 닫힌 창은 살짝 흐리게만 (완전히 숨기지 않음)
+        }
+    }
+}
+
+function showAllWindows() {
+    allWinIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) { el.style.display = 'flex'; el.style.flexDirection = 'column'; }
+        var sbBtn = document.querySelector('.sb-btn[data-win="'+id+'"]');
+        if (sbBtn) { sbBtn.classList.add('sb-active'); sbBtn.classList.remove('sb-hidden'); }
+    });
+}
+
+function hideAllWindows() {
+    allWinIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+        var sbBtn = document.querySelector('.sb-btn[data-win="'+id+'"]');
+        if (sbBtn) { sbBtn.classList.remove('sb-active'); }
+    });
+}
+
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 커스터마이저 열기 버튼
+
+
+
+
+// ══════════════════════════════════════════════
+//  🏠 스터디룸 인테리어 (Canvas 배경)
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  🎵 공부 BGM (Web Audio API - 자연스러운 사운드)
+// ══════════════════════════════════════════════
+var audioCtx = null;
+var bgmNodes = [];
+var bgmPlaying = false;
+var bgmCurrentType = null;
+var bgmGainNode = null;
+var masterVolume = 0.18; // 기본 볼륨 매우 낮게
+
+function initAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        bgmGainNode = audioCtx.createGain();
+        bgmGainNode.gain.value = masterVolume;
+        bgmGainNode.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+function createBuffer(seconds, fillFn) {
+    var sr = audioCtx.sampleRate;
+    var buf = audioCtx.createBuffer(2, sr * seconds, sr);
+    for (var ch = 0; ch < 2; ch++) {
+        var d = buf.getChannelData(ch);
+        fillFn(d, sr, ch);
+    }
+    return buf;
+}
+
+function playLoopBuffer(buf, gainVal) {
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    var g = audioCtx.createGain();
+    g.gain.value = gainVal;
+    src.connect(g);
+    g.connect(bgmGainNode);
+    src.start();
+    bgmNodes.push(src);
+    bgmNodes.push(g);
+    return { src: src, gain: g };
+}
+
+// 고품질 필터드 노이즈 생성
+function makeFilteredNoise(freq, Q, gainVal, type) {
+    var buf = createBuffer(4, function(d, sr) {
+        var b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+        for (var i=0;i<d.length;i++) {
+            var white = Math.random()*2-1;
+            // 핑크노이즈 (자연스러운 소리에 가까움)
+            b0=0.99886*b0+white*0.0555179;
+            b1=0.99332*b1+white*0.0750759;
+            b2=0.96900*b2+white*0.1538520;
+            b3=0.86650*b3+white*0.3104856;
+            b4=0.55000*b4+white*0.5329522;
+            b5=-0.7616*b5-white*0.0168980;
+            d[i]=(b0+b1+b2+b3+b4+b5+b6+white*0.5362)*0.11;
+            b6=white*0.115926;
+        }
+    });
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf; src.loop = true;
+    var filter = audioCtx.createBiquadFilter();
+    filter.type = type||'lowpass';
+    filter.frequency.value = freq;
+    filter.Q.value = Q||1;
+    var g = audioCtx.createGain(); g.gain.value = gainVal;
+    src.connect(filter); filter.connect(g); g.connect(bgmGainNode);
+    src.start();
+    bgmNodes.push(src); bgmNodes.push(g);
+    return { src:src, filter:filter, gain:g };
+}
+
+function stopBGM() {
+    bgmNodes.forEach(function(n){ try{ if(n.stop) n.stop(); else if(n.disconnect) n.disconnect(); }catch(e){} });
+    bgmNodes = [];
+    bgmPlaying = false;
+    bgmCurrentType = null;
+    document.querySelectorAll('.bgm-btn').forEach(function(b){ b.classList.remove('playing'); });
+    var np = document.getElementById('bgmNowPlaying');
+    if (np) np.innerText = '';
+    var tb = document.getElementById('bgmToggleBtn');
+    if (tb) tb.style.color = '';
+}
+
+function playBGM(type) {
+    initAudioCtx();
+    stopBGM();
+    bgmPlaying = true;
+    bgmCurrentType = type;
+
+    var names = {
+        rain:     langPack[currentLang]&&langPack[currentLang].bgm_rain     || '🌧️ 빗소리',
+        cafe:     langPack[currentLang]&&langPack[currentLang].bgm_cafe     || '☕ 카페',
+        forest:   langPack[currentLang]&&langPack[currentLang].bgm_forest   || '🌲 숲속',
+        wave:     langPack[currentLang]&&langPack[currentLang].bgm_wave     || '🌊 파도',
+        fire:     langPack[currentLang]&&langPack[currentLang].bgm_fire     || '🔥 모닥불',
+        keyboard: langPack[currentLang]&&langPack[currentLang].bgm_keyboard || '⌨️ 타이핑',
+    };
+    var np = document.getElementById('bgmNowPlaying');
+    if (np) np.innerText = '♪ ' + (names[type]||type);
+    var tb = document.getElementById('bgmToggleBtn');
+    if (tb) tb.style.color = 'var(--pink)';
+    document.querySelectorAll('.bgm-btn').forEach(function(b){
+        var oc = b.getAttribute('onclick')||'';
+        b.classList.toggle('playing', oc.includes("'"+type+"'"));
+    });
+
+    switch(type) {
+        case 'rain':     makeRainBGM();     break;
+        case 'cafe':     makeCafeBGM();     break;
+        case 'forest':   makeForestBGM();   break;
+        case 'wave':     makeWaveBGM();     break;
+        case 'fire':     makeFireBGM();     break;
+        case 'keyboard': makeKeyboardBGM(); break;
+    }
+}
+
+function makeRainBGM() {
+    // 부드러운 빗소리 - 핑크노이즈 여러 레이어
+    makeFilteredNoise(1800, 0.5, 0.6, 'bandpass');  // 메인 빗소리
+    makeFilteredNoise(600,  0.3, 0.3, 'lowpass');   // 낮은 웅웅거림
+    makeFilteredNoise(4000, 0.8, 0.15,'bandpass');  // 가는 빗소리
+
+    // 아주 가끔 빗방울 소리 (매우 부드럽게)
+    function gentleDrop() {
+        if (!bgmPlaying || bgmCurrentType !== 'rain') return;
+        var osc = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        var filter = audioCtx.createBiquadFilter();
+        filter.type = 'bandpass'; filter.frequency.value = 600+Math.random()*300;
+        osc.type = 'sine';
+        osc.frequency.value = 800 + Math.random()*200;
+        var now = audioCtx.currentTime;
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.04, now+0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, now+0.3);
+        osc.connect(filter); filter.connect(g); g.connect(bgmGainNode);
+        osc.start(now); osc.stop(now+0.35);
+        setTimeout(gentleDrop, 300 + Math.random()*1200);
+    }
+    setTimeout(gentleDrop, 500);
+}
+
+function makeCafeBGM() {
+    // 카페 소음 - 낮고 부드러운 웅웅거림
+    makeFilteredNoise(200, 0.8, 0.4, 'lowpass');
+    makeFilteredNoise(800, 0.4, 0.15,'bandpass');
+
+    // 컵 소리 (아주 가끔, 아주 작게)
+    function gentleClink() {
+        if (!bgmPlaying || bgmCurrentType !== 'cafe') return;
+        var buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.3, audioCtx.sampleRate);
+        var d = buf.getChannelData(0);
+        var freq = 1400+Math.random()*400;
+        for (var i=0;i<d.length;i++) {
+            d[i] = Math.sin(2*Math.PI*freq*i/audioCtx.sampleRate) * Math.exp(-i/(audioCtx.sampleRate*0.1)) * 0.3;
+            d[i] += Math.sin(2*Math.PI*(freq*2.1)*i/audioCtx.sampleRate) * Math.exp(-i/(audioCtx.sampleRate*0.06)) * 0.1;
+        }
+        var src = audioCtx.createBufferSource(); src.buffer=buf;
+        var g = audioCtx.createGain(); g.gain.value=0.06;
+        src.connect(g); g.connect(bgmGainNode); src.start();
+        setTimeout(gentleClink, 4000+Math.random()*8000);
+    }
+    setTimeout(gentleClink, 2000);
+
+    // 조용한 발소리
+    function footstep() {
+        if (!bgmPlaying || bgmCurrentType !== 'cafe') return;
+        var dur = 0.08;
+        var buf = audioCtx.createBuffer(1, audioCtx.sampleRate*dur, audioCtx.sampleRate);
+        var d = buf.getChannelData(0);
+        for (var i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(audioCtx.sampleRate*0.03));
+        var src = audioCtx.createBufferSource(); src.buffer=buf;
+        var filter = audioCtx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=300;
+        var g = audioCtx.createGain(); g.gain.value=0.08;
+        src.connect(filter); filter.connect(g); g.connect(bgmGainNode); src.start();
+        setTimeout(footstep, 2000+Math.random()*6000);
+    }
+    setTimeout(footstep, 1000);
+}
+
+function makeForestBGM() {
+    // 바람 소리
+    makeFilteredNoise(300, 0.6, 0.35, 'bandpass');
+    makeFilteredNoise(100, 0.4, 0.2,  'lowpass');
+
+    // 새소리 (부드러운 사인파)
+    function bird() {
+        if (!bgmPlaying || bgmCurrentType !== 'forest') return;
+        var now = audioCtx.currentTime;
+        var freq = 2000+Math.random()*1000;
+        var chirps = 2+Math.floor(Math.random()*3);
+        for (var i=0;i<chirps;i++) {
+            var osc = audioCtx.createOscillator();
+            var g = audioCtx.createGain();
+            osc.type = 'sine';
+            var t0 = now + i*0.12;
+            osc.frequency.setValueAtTime(freq, t0);
+            osc.frequency.linearRampToValueAtTime(freq*1.15, t0+0.06);
+            osc.frequency.linearRampToValueAtTime(freq, t0+0.1);
+            g.gain.setValueAtTime(0, t0);
+            g.gain.linearRampToValueAtTime(0.06, t0+0.02);
+            g.gain.linearRampToValueAtTime(0, t0+0.1);
+            osc.connect(g); g.connect(bgmGainNode);
+            osc.start(t0); osc.stop(t0+0.12);
+        }
+        setTimeout(bird, 3000+Math.random()*7000);
+    }
+    setTimeout(bird, 1000);
+
+    // 풀벌레 소리
+    function cricket() {
+        if (!bgmPlaying || bgmCurrentType !== 'forest') return;
+        var osc = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 3800+Math.random()*400;
+        var now = audioCtx.currentTime;
+        var dur = 0.04+Math.random()*0.06;
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.015, now+0.005);
+        g.gain.setValueAtTime(0.015, now+dur-0.01);
+        g.gain.linearRampToValueAtTime(0, now+dur);
+        var filter = audioCtx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=4000; filter.Q.value=2;
+        osc.connect(filter); filter.connect(g); g.connect(bgmGainNode);
+        osc.start(now); osc.stop(now+dur+0.01);
+        setTimeout(cricket, 50+Math.random()*200);
+    }
+    setTimeout(cricket, 500);
+}
+
+function makeWaveBGM() {
+    // 파도 = 핑크노이즈 + 천천히 흔들리는 LFO
+    var noise = makeFilteredNoise(600, 0.5, 0.5, 'lowpass');
+    // LFO로 볼륨 천천히 변화 (파도 리듬)
+    var lfo = audioCtx.createOscillator();
+    lfo.type = 'sine'; lfo.frequency.value = 0.12; // 매우 느린 파도
+    var lfoGain = audioCtx.createGain(); lfoGain.gain.value = 0.3;
+    lfo.connect(lfoGain); lfoGain.connect(noise.gain.gain||bgmGainNode);
+    lfo.start(); bgmNodes.push(lfo);
+    makeFilteredNoise(2000, 0.3, 0.08, 'highpass'); // 거품소리
+}
+
+function makeFireBGM() {
+    // 모닥불 - 매우 자연스럽게
+    makeFilteredNoise(200, 1.5, 0.5, 'bandpass');  // 불 기본 소리
+    makeFilteredNoise(80,  0.5, 0.3, 'lowpass');   // 낮은 기저음
+    makeFilteredNoise(600, 2.0, 0.12,'bandpass');  // 타닥 고주파
+
+    // 불꽃 타닥 소리
+    function crackle() {
+        if (!bgmPlaying || bgmCurrentType !== 'fire') return;
+        var dur = audioCtx.sampleRate * (0.01+Math.random()*0.04);
+        var buf = audioCtx.createBuffer(1, dur, audioCtx.sampleRate);
+        var d = buf.getChannelData(0);
+        for (var i=0;i<dur;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/dur*6)*0.4;
+        var src = audioCtx.createBufferSource(); src.buffer=buf;
+        var g = audioCtx.createGain(); g.gain.value=0.25;
+        src.connect(g); g.connect(bgmGainNode); src.start();
+        setTimeout(crackle, 150+Math.random()*600);
+    }
+    crackle();
+}
+
+function makeKeyboardBGM() {
+    // 배경 카페 소음 (아주 낮게)
+    makeFilteredNoise(300, 0.5, 0.12, 'lowpass');
+
+    // 현실적인 키 클릭
+    function keyClick() {
+        if (!bgmPlaying || bgmCurrentType !== 'keyboard') return;
+        var dur = audioCtx.sampleRate * 0.025;
+        var buf = audioCtx.createBuffer(1, dur, audioCtx.sampleRate);
+        var d = buf.getChannelData(0);
+        for (var i=0;i<dur;i++) {
+            d[i] = (Math.random()*2-1) * Math.exp(-i/dur*12) * 0.6;
+        }
+        var src = audioCtx.createBufferSource(); src.buffer=buf;
+        var f = audioCtx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2500+Math.random()*1000; f.Q.value=1;
+        var g = audioCtx.createGain(); g.gain.value=0.18+Math.random()*0.08;
+        src.connect(f); f.connect(g); g.connect(bgmGainNode); src.start();
+        // 가끔 스페이스바 소리
+        if (Math.random()<0.1) {
+            setTimeout(function(){
+                var buf2=audioCtx.createBuffer(1,audioCtx.sampleRate*0.04,audioCtx.sampleRate);
+                var d2=buf2.getChannelData(0);
+                for(var i=0;i<d2.length;i++) d2[i]=(Math.random()*2-1)*Math.exp(-i/d2.length*8)*0.4;
+                var s2=audioCtx.createBufferSource(); s2.buffer=buf2;
+                var g2=audioCtx.createGain(); g2.gain.value=0.12;
+                s2.connect(g2); g2.connect(bgmGainNode); s2.start();
+            }, 80);
+        }
+        var nextDelay = 80+Math.random()*250;
+        // 타이핑 버스트 (여러 키 연속)
+        if (Math.random()<0.3) nextDelay = 40+Math.random()*80;
+        // 긴 멈춤 (생각하는 시간)
+        if (Math.random()<0.08) nextDelay = 800+Math.random()*2000;
+        setTimeout(keyClick, nextDelay);
+    }
+    setTimeout(keyClick, 200);
+}
+
+function setBGMVolume(val) {
+    masterVolume = val/100 * 0.4; // 최대 0.4로 제한 (너무 크지 않게)
+    if (bgmGainNode) bgmGainNode.gain.value = masterVolume;
+    var lbl = document.getElementById('bgmVolLabel');
+    if (lbl) lbl.innerText = val+'%';
+}
+
+function toggleBGMPanel() {
+    var panel = document.getElementById('bgmPanel');
+    if (!panel) return;
+    var win = document.getElementById('win-profile');
+    if (win && win.style.display === 'none') toggleWindow('win-profile');
+    panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'flex' : 'none';
+    // flex-direction 설정
+    if (panel.style.display === 'flex') panel.style.flexDirection = 'column';
+}
+
+// ══════════════════════════════════════════════
+//  🌸 계절 파티클 + 시간대 테마
+// ══════════════════════════════════════════════
+var particleInterval = null;
+var timeThemeInterval = null;
+var autoTimeTheme = localStorage.getItem('auto_time_theme') !== 'false';
+
+var TIME_THEMES = {
+    dawn:    { bg:'rgba(50,20,80,0.15)',   label:'새벽 🌙', hour:[0,5] },
+    morning: { bg:'rgba(255,200,100,0.08)', label:'아침 ☀️', hour:[6,10] },
+    noon:    { bg:'rgba(255,255,200,0.05)', label:'낮 ☀️',   hour:[11,16] },
+    evening: { bg:'rgba(255,120,50,0.1)',  label:'저녁 🌅', hour:[17,19] },
+    night:   { bg:'rgba(20,20,60,0.2)',    label:'밤 🌃',   hour:[20,23] },
+};
+
+var SEASON_PARTICLES = {
+    spring: { emoji:['🌸','🌺','🌷'], size:[12,16], speed:[3,6], count:12 },
+    summer: { emoji:['☀️','🌻','🍃'], size:[14,18], speed:[2,4], count:8 },
+    autumn: { emoji:['🍂','🍁','🍃'], size:[14,20], speed:[3,5], count:15 },
+    winter: { emoji:['❄️','⛄','✨'], size:[10,16], speed:[2,4], count:20 },
+};
+
+function getCurrentSeason() {
+    var m = new Date().getMonth();
+    if (m>=2&&m<=4) return 'spring';
+    if (m>=5&&m<=7) return 'summer';
+    if (m>=8&&m<=10) return 'autumn';
+    return 'winter';
+}
+
+function getCurrentTimeSlot() {
+    var h = new Date().getHours();
+    for (var slot in TIME_THEMES) {
+        var t = TIME_THEMES[slot];
+        if (h >= t.hour[0] && h <= t.hour[1]) return slot;
+    }
+    return 'night';
+}
+
+function applyTimeTheme() {
+    if (!autoTimeTheme) return;
+    var slot = getCurrentTimeSlot();
+    var theme = TIME_THEMES[slot];
+    var overlay = document.getElementById('timeOverlay');
+    if (overlay) overlay.style.background = theme.bg;
+}
+
+function startSeasonParticles() {
+    stopSeasonParticles();
+    var season = getCurrentSeason();
+    var cfg = SEASON_PARTICLES[season];
+    var container = document.getElementById('particleContainer');
+    if (!container) return;
+
+    function spawnParticle() {
+        if (!container) return;
+        var el = document.createElement('div');
+        el.className = 'particle';
+        el.innerText = cfg.emoji[Math.floor(Math.random()*cfg.emoji.length)];
+        var size = cfg.size[0] + Math.random()*(cfg.size[1]-cfg.size[0]);
+        var speed = cfg.speed[0] + Math.random()*(cfg.speed[1]-cfg.speed[0]);
+        el.style.cssText = 'left:'+Math.random()*100+'vw;top:-30px;font-size:'+size+'px;'+
+            'animation-duration:'+speed+'s;animation-delay:'+Math.random()*2+'s;opacity:0.7;';
+        container.appendChild(el);
+        setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, (speed+2)*1000);
+    }
+
+    particleInterval = setInterval(spawnParticle, 800);
+    // 처음에 조금 생성
+    for (var i=0;i<cfg.count;i++) setTimeout(spawnParticle, i*200);
+}
+
+function stopSeasonParticles() {
+    clearInterval(particleInterval);
+    var container = document.getElementById('particleContainer');
+    if (container) container.innerHTML = '';
+}
+
+// ══════════════════════════════════════════════
+//  채팅 UI 개선 - 말풍선 스타일
+// ══════════════════════════════════════════════
+function renderChatMessage(msg, isMe) {
+    var div = document.createElement('div');
+    div.className = 'chat-line' + (isMe ? ' mine' : '');
+    if (!isMe) {
+        var sender = document.createElement('div');
+        sender.className = 'chat-sender';
+        sender.innerText = msg.name;
+        div.appendChild(sender);
+    }
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.innerText = msg.msg;
+    div.appendChild(bubble);
+    return div;
+}
+
+
+// ══════════════════════════════════════════════
+//  멤버 상세 정보 팝업
+// ══════════════════════════════════════════════
+var _memberDetailData = {};
+
+function closeMemberDetail() { var m = document.getElementById('memberDetailModal'); if(m) m.remove(); }
+
+function showMemberDetail(uid) {
+    if (!activeRoom || !refDB) return;
+    refDB.ref('studyclub/'+activeRoom+'/users/'+uid).once('value', function(s) {
+        if (!s.exists()) return;
+        var u = s.val();
+        _memberDetailData[uid] = u;
+
+        var goalMin = Math.floor((u.goalSec||0)/60);
+        var goalH   = Math.floor(goalMin/60);
+        var goalM   = goalMin % 60;
+        var goalStr = (u.goalSec > 0) ? (goalH>0 ? goalH+'시간 ' : '') + (goalM>0 ? goalM+'분' : '') + ' 목표' : '목표 없음';
+
+        // D-Day 파싱
+        var ddayHtml = '';
+        try {
+            var ddays = JSON.parse(u.ddays || '[]');
+            if (ddays.length > 0) {
+                var today = new Date(); today.setHours(0,0,0,0);
+                ddays.slice(0,3).forEach(function(d) {
+                    var target = new Date(d.date); target.setHours(0,0,0,0);
+                    var diff = Math.round((target-today)/86400000);
+                    var badge = diff===0 ? 'D-Day!🎉' : diff>0 ? 'D-'+diff : 'D+'+Math.abs(diff);
+                    ddayHtml += '<span style="font-size:0.75rem;background:var(--pink-light);padding:2px 8px;border-radius:10px;margin-right:4px;">'
+                        + d.label + ' <b>' + badge + '</b></span>';
+                });
+            } else { ddayHtml = '<span style="color:var(--text-muted);font-size:0.78rem;">없음</span>'; }
+        } catch(e) { ddayHtml = '<span style="color:var(--text-muted);font-size:0.78rem;">없음</span>'; }
+
+        var memoPreview = (u.memo || '').slice(0, 80) || '없음';
+
+        // 팝업 표시
+        var modal = document.getElementById('memberDetailModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'memberDetailModal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+            modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+        modal.innerHTML =
+            '<div style="background:var(--surface);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:24px;padding:28px;width:340px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px;">' +
+            '<div style="display:flex;align-items:center;gap:12px;">' +
+                (u.img ? '<img src="'+u.img+'" style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border);">' : '<div style="width:48px;height:48px;border-radius:50%;background:var(--pink-light);border:2px solid var(--border);"></div>') +
+                '<div>' +
+                    '<div style="font-size:1rem;font-weight:700;">' + (u.name||'') + '</div>' +
+                    '<div style="font-size:0.78rem;color:var(--text-muted);">' + (u.subject||'공부 중') + '</div>' +
+                    (u.status ? '<div style="font-size:0.72rem;background:var(--pink-light);color:var(--pink-dark);padding:2px 8px;border-radius:10px;display:inline-block;margin-top:3px;">' + u.status + '</div>' : '') +
+                '</div>' +
+            '</div>' +
+            '<div style="height:1px;background:var(--border);"></div>' +
+            '<div style="display:flex;gap:10px;">' +
+                '<div style="flex:1;background:var(--pink-light);border-radius:var(--radius-sm);padding:10px;text-align:center;">' +
+                    '<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">⏱️ 공부 시간</div>' +
+                    '<div style="font-size:1rem;font-weight:700;color:var(--pink-dark);">' + (u.time||'00:00:00') + '</div>' +
+                '</div>' +
+                '<div style="flex:1;background:var(--pink-light);border-radius:var(--radius-sm);padding:10px;text-align:center;">' +
+                    '<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">🎯 오늘 목표</div>' +
+                    '<div style="font-size:0.82rem;font-weight:700;color:var(--pink-dark);">' + goalStr + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div>' +
+                '<div style="font-size:0.72rem;color:var(--text-muted);font-weight:700;margin-bottom:5px;">📅 D-Day</div>' +
+                '<div>' + ddayHtml + '</div>' +
+            '</div>' +
+            '<div>' +
+                '<div style="font-size:0.72rem;color:var(--text-muted);font-weight:700;margin-bottom:5px;">📝 오늘의 메모</div>' +
+                '<div style="font-size:0.82rem;background:rgba(255,255,255,0.6);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;color:var(--text);min-height:36px;line-height:1.6;">' +
+                    (memoPreview === '없음' ? '<span style="color:var(--text-muted);">없음</span>' : memoPreview) +
+                '</div>' +
+            '</div>' +
+            '<button onclick="closeMemberDetail()" style="width:100%;background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;">닫기</button>' +
+            '</div>';
+        modal.style.display = 'flex';
+    });
+}
+
+// ══════════════════════════════════════════════
+//  드래그
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+//  🔔 뽀모도로 알림음
+// ══════════════════════════════════════════════
+function playPomoChime(isWork) {
+    try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // 띵동♩ 소리 (두 음)
+        var notes = isWork ? [523, 659] : [659, 523]; // C5→E5 (집중) / E5→C5 (휴식)
+        notes.forEach(function(freq, i) {
+            var osc = ctx.createOscillator();
+            var g   = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            var t = ctx.currentTime + i * 0.22;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.35, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(t); osc.stop(t + 0.55);
+        });
+        // 배음 (더 풍성하게)
+        notes.forEach(function(freq, i) {
+            var osc = ctx.createOscillator();
+            var g   = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = freq * 2;
+            var t = ctx.currentTime + i * 0.22;
+            g.gain.setValueAtTime(0, t);
+            g.gain.linearRampToValueAtTime(0.08, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+            osc.connect(g); g.connect(ctx.destination);
+            osc.start(t); osc.stop(t + 0.45);
+        });
+        setTimeout(function(){ ctx.close(); }, 1500);
+    } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  🍬 토스트 알림
+// ══════════════════════════════════════════════
+function showToast(msg, duration) {
+    var t = document.getElementById('toastNotif');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'toastNotif';
+        t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+            'background:var(--surface);backdrop-filter:blur(16px);border:1px solid var(--border);' +
+            'padding:10px 22px;border-radius:40px;font-size:0.88rem;z-index:9000;' +
+            'box-shadow:var(--shadow-md);transition:opacity .3s;opacity:0;pointer-events:none;';
+        document.body.appendChild(t);
+    }
+    t.innerText = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.style.opacity='0'; }, duration||2500);
+}
+
+
+// ══════════════════════════════════════════════
+//  ✨ 마우스 클릭 이펙트
+// ══════════════════════════════════════════════
+var cursorEffectOn = localStorage.getItem('cursor_effect') !== 'false';
+
+var CURSOR_PARTICLES = ['✦','✧','♡','★','·','⋆','∗'];
+
+document.addEventListener('click', function(e) {
+    if (!cursorEffectOn) return;
+    // 버튼/입력 클릭은 더 화려하게
+    var count = ['BUTTON','A'].includes(e.target.tagName) ? 8 : 5;
+    for (var i = 0; i < count; i++) {
+        spawnCursorParticle(e.clientX, e.clientY, i);
+    }
+});
+
+function spawnCursorParticle(x, y, i) {
+    var el = document.createElement('div');
+    el.innerText = CURSOR_PARTICLES[Math.floor(Math.random() * CURSOR_PARTICLES.length)];
+    var angle  = (i / 8) * Math.PI * 2 + Math.random() * 0.8;
+    var dist   = 30 + Math.random() * 50;
+    var size   = 10 + Math.random() * 14;
+    var dur    = 600 + Math.random() * 400;
+    el.style.cssText =
+        'position:fixed;left:'+x+'px;top:'+y+'px;font-size:'+size+'px;' +
+        'color:var(--pink);pointer-events:none;z-index:99999;' +
+        'transition:all '+dur+'ms cubic-bezier(.2,.8,.4,1);' +
+        'opacity:1;transform:translate(-50%,-50%);text-shadow:0 0 6px rgba(244,114,182,0.6);';
+    document.body.appendChild(el);
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            el.style.left   = (x + Math.cos(angle) * dist) + 'px';
+            el.style.top    = (y + Math.sin(angle) * dist) + 'px';
+            el.style.opacity = '0';
+            el.style.fontSize = (size * 0.5) + 'px';
+        });
+    });
+    setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, dur + 100);
+}
+
+function toggleCursorEffect() {
+    cursorEffectOn = !cursorEffectOn;
+    localStorage.setItem('cursor_effect', cursorEffectOn);
+    showToast(cursorEffectOn ? '✨ 클릭 이펙트 켜짐' : '클릭 이펙트 꺼짐');
+}
+var maxZIndex = 100;
+
+function bringToFront(el) {
+    maxZIndex++;
+    el.style.zIndex = maxZIndex;
+}
+
+function makeElementDraggable(el) {
+    var p1=0,p2=0,p3=0,p4=0;
+    var bar = el.querySelector('.title-bar');
+    if (!bar) return;
+
+    // 창 클릭 시 앞으로
+    el.addEventListener('mousedown', function() { bringToFront(el); }, true);
+
+    bar.onmousedown = function(e) {
+        if (['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target.tagName)) return;
+        bringToFront(el);
+        p3=e.clientX; p4=e.clientY;
+        document.onmouseup = function(){ document.onmouseup=null; document.onmousemove=null; };
+        document.onmousemove = function(e){
+            p1=p3-e.clientX; p2=p4-e.clientY; p3=e.clientX; p4=e.clientY;
+            // 화면 밖으로 나가지 않게 제한
+            var newTop  = Math.max(0, Math.min(window.innerHeight-40,  el.offsetTop-p2));
+            var newLeft = Math.max(0, Math.min(window.innerWidth-60, el.offsetLeft-p1));
+            el.style.top  = newTop  + 'px';
+            el.style.left = newLeft + 'px';
+            p3=e.clientX; p4=e.clientY;
+        };
+    };
+}
+
+// ══════════════════════════════════════════════
+//  창 위치 초기화
+// ══════════════════════════════════════════════
+function resetWindowPositions() {
+    var layout = [
+        {id:'win-profile',  top:20,  left:70,  w:300, h:500},
+        {id:'win-memo',     top:20,  left:385, w:300, h:260},
+        {id:'win-timer',    top:20,  left:700, w:320, h:330},
+        {id:'win-chat',     top:300, left:385, w:380, h:330},
+        {id:'win-members',  top:480, left:70,  w:300, h:300},
+        {id:'win-media',    top:300, left:780, w:420, h:340},
+        {id:'win-friends',  top:20,  left:1035,w:300, h:330},
+        {id:'win-goal',     top:350, left:70,  w:300, h:230},
+        {id:'win-stats',    top:640, left:385, w:380, h:260},
+        {id:'win-dday',     top:640, left:780, w:420, h:260},
+        {id:'win-clock',    top:350, left:1035,w:300, h:260},
+    ];
+    layout.forEach(function(l) {
+        var el = document.getElementById(l.id);
+        if (!el || el.style.display === 'none') return;
+        el.style.top    = l.top  + 'px';
+        el.style.left   = l.left + 'px';
+        el.style.width  = l.w    + 'px';
+        el.style.height = l.h    + 'px';
+    });
+    // 토스트 알림
+    showToast('🔄 창 위치가 초기화됐어요!');
+}
+</script>
+
+<!-- 공지 배너 -->
+<div id="noticeBanner">📢 <span id="noticeText"></span> <span onclick="document.getElementById('noticeBanner').style.display='none'" style="cursor:pointer;margin-left:8px;font-size:1rem;">✕</span></div>
+
+<!-- 목표 달성 배너 -->
+<div id="goalBanner">
+    <div style="font-size:2.5rem;">🎉</div>
+    <div style="font-size:1.3rem;color:white;text-shadow:2px 2px 0 var(--text-main);margin:8px 0;">목표 달성!</div>
+    <div id="goalBannerMsg" style="font-size:0.95rem;color:white;"></div>
+    <button onclick="document.getElementById('goalBanner').style.display='none'" style="margin-top:14px;background:white;color:var(--gui-dark-pink);">닫기</button>
+</div>
+
+<!-- ⑧ 목표 & 뽀모도로 -->
+<div class="window resizable-window" id="win-goal" style="display:none;top:375px;left:70px;width:300px;height:240px;">
+    <div class="title-bar" id="goalTitleBar" data-win="win-goal">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-goal')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span>GOAL_TIMER.EXE 🎯</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body" style="gap:7px;">
+        <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
+            <span style="font-size:0.8rem;color:var(--gui-dark-pink);white-space:nowrap;">🎯 목표</span>
+            <select id="goalHour" style="flex:1;font-size:0.86rem;padding:4px;">
+                <option value="0">0h</option><option value="1">1h</option><option value="2">2h</option>
+                <option value="3">3h</option><option value="4">4h</option><option value="5">5h</option>
+                <option value="6">6h</option><option value="8">8h</option><option value="10">10h</option>
+            </select>
+            <select id="goalMin" style="flex:1;font-size:0.86rem;padding:4px;">
+                <option value="0">0m</option><option value="10">10m</option><option value="20">20m</option>
+                <option value="30">30m</option><option value="40">40m</option><option value="50">50m</option>
+            </select>
+            <button onclick="setGoal()" style="font-size:0.82rem;padding:4px 10px;">설정</button>
+        </div>
+        <div id="goalProgress" style="font-size:0.8rem;color:#aaa;text-align:center;">목표를 설정해 주세요!</div>
+        <div class="stat-bar-bg" style="width:100%;flex-shrink:0;"><div class="stat-bar-fill" id="goalBar" style="width:0%;"></div></div>
+        <div style="border-top:2px dashed var(--gui-pink);padding-top:7px;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                <span style="font-size:0.8rem;color:var(--gui-dark-pink);">🍅 뽀모도로</span>
+                <span id="pomoBadge" class="pomo-work" style="display:none;"></span>
+            </div>
+            <div style="display:flex;gap:4px;margin-bottom:5px;flex-wrap:wrap;">
+                <button onclick="setPomoPreset(25,5)"  style="font-size:0.72rem;padding:2px 7px;border-radius:8px;">25/5</button>
+                <button onclick="setPomoPreset(50,10)" style="font-size:0.72rem;padding:2px 7px;border-radius:8px;">50/10</button>
+                <button onclick="setPomoPreset(90,20)" style="font-size:0.72rem;padding:2px 7px;border-radius:8px;">90/20</button>
+                <span style="font-size:0.72rem;color:#aaa;align-self:center;">직접:</span>
+                <input type="number" id="pomoWorkMin" value="25" min="1" max="120" style="width:38px;font-size:0.72rem;padding:2px 4px;border-radius:6px;">
+                <span style="font-size:0.72rem;color:#aaa;align-self:center;">집중/</span>
+                <input type="number" id="pomoBreakMin" value="5" min="1" max="60" style="width:38px;font-size:0.72rem;padding:2px 4px;border-radius:6px;">
+                <span style="font-size:0.72rem;color:#aaa;align-self:center;">휴식</span>
+            </div>
+            <div style="display:flex;gap:5px;">
+                <button onclick="startPomo()" class="btn-green" style="flex:1;font-size:0.82rem;">▶ 시작</button>
+                <button onclick="stopPomo()" class="btn-red" style="flex:1;font-size:0.82rem;">■ 중지</button>
+                <div id="pomoDisplay" style="flex:1;text-align:center;font-size:1rem;background:var(--gui-bubble);border:var(--round-border);border-radius:10px;padding:4px;letter-spacing:1px;">25:00</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ⑨ 통계 & 랭킹 -->
+<div class="window resizable-window" id="win-stats" style="display:none;top:20px;left:1350px;width:380px;height:340px;">
+    <div class="title-bar" id="statTitleBar" data-win="win-stats">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-stats')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span>STATS_RANKING.EXE 📊</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button id="tabStats" class="tab-btn tab-on" onclick="switchStatTab('stats')" data-lang="tab_stats">📊 내 통계</button>
+            <button id="tabRank" class="tab-btn tab-off" onclick="switchStatTab('rank')" data-lang="tab_rank">🏆 방 랭킹</button>
+        </div>
+        <!-- 오늘 누적 타이커 - 항상 표시 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:linear-gradient(135deg,var(--pink-light),var(--pink-mid));border-radius:var(--radius-sm);border:1px solid var(--border);flex-shrink:0;">
+            <div style="font-size:0.78rem;color:var(--pink-deep);font-weight:700;" data-lang="lbl_today_accum">📅 오늘 누적 공부</div>
+            <div id="todayAccumDisplay" style="font-size:1.05rem;font-weight:800;color:var(--pink-dark);letter-spacing:1px;">0h 0m 0s</div>
+        </div>
+        <div id="statsView" style="flex:1;overflow-y:auto;"></div>
+        <div id="rankView"  style="flex:1;overflow-y:auto;display:none;"></div>
+    </div>
+</div>
+
+<!-- ⑩ D-Day & 방 공지 -->
+<div class="window resizable-window" id="win-dday" style="display:none;top:375px;left:1350px;width:380px;height:300px;">
+    <div class="title-bar" id="ddayTitleBar" data-win="win-dday">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-dday')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span>DDAY_NOTICE.EXE 📅</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body">
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button id="tabDday" class="tab-btn tab-on" onclick="switchDdayTab('dday')" data-lang="tab_dday">📅 D-Day</button>
+            <button id="tabNotice" class="tab-btn tab-off" onclick="switchDdayTab('notice')" data-lang="tab_notice">📢 방 공지</button>
+        </div>
+        <!-- D-Day -->
+        <div id="ddayPanel" style="flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto;">
+            <div style="display:flex;gap:5px;flex-shrink:0;">
+                <input type="text" id="ddayLabel" placeholder="이벤트 이름 (예: 수능)" style="flex:2;font-size:0.84rem;">
+                <input type="date" id="ddayDate" style="flex:2;font-size:0.84rem;">
+                <button onclick="addDday()" style="flex:0 0 auto;font-size:0.82rem;padding:4px 10px;">추가</button>
+            </div>
+            <div id="ddayList" style="display:flex;flex-direction:column;gap:5px;"></div>
+        </div>
+        <!-- 방 공지 -->
+        <div id="noticePanel" style="flex:1;display:none;flex-direction:column;gap:6px;">
+            <div style="font-size:0.78rem;color:#888;" data-lang="notice_owner_only">방장만 공지를 작성할 수 있어요.</div>
+            <textarea id="noticeInput" placeholder="공지 내용 입력..." style="flex:1;resize:none;font-size:0.86rem;"></textarea>
+            <button onclick="postNotice()" style="flex-shrink:0;">📢 공지 올리기</button>
+            <div id="currentNoticeView" style="font-size:0.82rem;color:#888;"></div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ⑬ 시계 -->
+<div class="window resizable-window" id="win-clock" style="display:none;top:670px;left:70px;width:300px;height:270px;">
+    <div class="title-bar" id="clockTitleBar" data-win="win-clock">
+        <div class="dots"><span class="d-r" onclick="toggleWindow('win-clock')" style="cursor:pointer;" title="닫기"></span><span class="d-y"></span><span class="d-g"></span></div>
+        <span>WORLD_CLOCK.SYS 🕐</span><span style="width:39px"></span>
+    </div>
+    <div class="window-body" style="gap:7px;">
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+            <button id="tabAnalog"  class="tab-btn tab-on"  onclick="switchClockTab('analog')"  style="font-size:0.78rem;">🕐 아날로그</button>
+            <button id="tabDigital" class="tab-btn tab-off" onclick="switchClockTab('digital')" style="font-size:0.78rem;">🔢 디지털</button>
+        </div>
+        <!-- 아날로그 -->
+        <div id="analogClockPanel" style="display:flex;justify-content:center;align-items:center;flex:1;">
+            <canvas id="analogClock" width="160" height="160"></canvas>
+        </div>
+        <!-- 디지털 -->
+        <div id="digitalClockPanel" style="display:none;flex-direction:column;gap:6px;flex:1;overflow-y:auto;">
+            <div id="digitalClockList"></div>
+            <div style="display:flex;gap:4px;flex-shrink:0;">
+                <select id="tzSelect" style="flex:1;font-size:0.78rem;padding:3px;">
+                    <option value="Asia/Seoul">서울 (KST)</option>
+                    <option value="Asia/Tokyo">도쿄 (JST)</option>
+                    <option value="America/New_York">뉴욕 (EST)</option>
+                    <option value="America/Los_Angeles">LA (PST)</option>
+                    <option value="Europe/London">런던 (GMT)</option>
+                    <option value="Europe/Paris">파리 (CET)</option>
+                    <option value="Asia/Shanghai">상하이 (CST)</option>
+                    <option value="Australia/Sydney">시드니 (AEST)</option>
+                </select>
+                <button onclick="addClockTz()" style="font-size:0.78rem;padding:3px 8px;">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- 사이드바 -->
+<div id="appSidebar">
+  <button id="sidebarToggle" onclick="toggleSidebar()" title="메뉴">
+    <span id="sidebarIcon">☰</span>
+  </button>
+  <div class="sb-sep"></div>
+  <div class="sb-group-label">메인</div>
+  <button class="sb-btn" onclick="toggleWindow('win-profile')"  data-win="win-profile" title="프로필">
+    <span class="sb-icon">👤</span><span class="sb-label">프로필</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-timer')"    data-win="win-timer"   title="타이머">
+    <span class="sb-icon">⏱️</span><span class="sb-label">타이머</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-memo')"     data-win="win-memo"    title="메모">
+    <span class="sb-icon">📝</span><span class="sb-label">메모</span>
+  </button>
+  <div class="sb-sep"></div>
+  <div class="sb-group-label">소통</div>
+  <button class="sb-btn" onclick="toggleWindow('win-chat')"     data-win="win-chat"    title="채팅">
+    <span class="sb-icon">💬</span><span class="sb-label">채팅</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-members')"  data-win="win-members" title="멤버">
+    <span class="sb-icon">👥</span><span class="sb-label">멤버</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-friends')"  data-win="win-friends" title="친구">
+    <span class="sb-icon">🤝</span><span class="sb-label">친구</span>
+  </button>
+  <div class="sb-sep"></div>
+  <div class="sb-group-label">공부</div>
+  <button class="sb-btn" onclick="toggleWindow('win-goal')"     data-win="win-goal"    title="목표">
+    <span class="sb-icon">🎯</span><span class="sb-label">목표 / 뽀모도로</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-stats')"    data-win="win-stats"   title="통계">
+    <span class="sb-icon">📊</span><span class="sb-label">통계 / 랭킹</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-dday')"     data-win="win-dday"    title="D-Day">
+    <span class="sb-icon">📅</span><span class="sb-label">D-Day / 공지</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-media')"    data-win="win-media"   title="유튜브">
+    <span class="sb-icon">🎬</span><span class="sb-label">유튜브</span>
+  </button>
+  <button class="sb-btn" onclick="toggleWindow('win-clock')"    data-win="win-clock"   title="시계">
+    <span class="sb-icon">🕐</span><span class="sb-label">시계</span>
+  </button>
+  <div class="sb-sep" style="margin-top:auto;"></div>
+  <button class="sb-btn sb-action" onclick="showAllWindows()" title="전체 열기">
+    <span class="sb-icon" style="font-size:0.7rem;">●●</span><span class="sb-label">전체 열기</span>
+  </button>
+  <button class="sb-btn sb-action" onclick="hideAllWindows()" title="전체 닫기">
+    <span class="sb-icon" style="font-size:0.7rem;">○○</span><span class="sb-label">전체 닫기</span>
+  </button>
+  <button class="sb-btn sb-action" onclick="resetWindowPositions()" title="창 위치 초기화">
+    <span class="sb-icon">🔄</span><span class="sb-label">창 위치 초기화</span>
+  </button>
+  <button class="sb-btn sb-action" onclick="toggleCursorEffect()" title="클릭 이펙트">
+    <span class="sb-icon">✨</span><span class="sb-label">클릭 이펙트</span>
+  </button>
+</div>
+
+
+
+
+<!-- ══ 방 만들기 모달 ══ -->
+<div id="createRoomModal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:24px;padding:32px;width:360px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:1.2rem;font-weight:800;color:var(--pink-dark);">🏠 새 방 만들기</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:700;">방 이름 *</label>
+      <input type="text" id="newRoomName" placeholder="예: 수능 스터디방" maxlength="20">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:700;">방 코드 * (영문+숫자, 본인이 설정)</label>
+      <input type="text" id="newRoomCode" placeholder="예: STUDY7" maxlength="10"
+        style="text-transform:uppercase;letter-spacing:2px;"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:700;">비밀번호 (없으면 공개방)</label>
+      <input type="password" id="newRoomPw" placeholder="비밀번호 입력 (선택)">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:700;">최대 인원</label>
+      <select id="newRoomMax">
+        <option value="4">4명</option>
+        <option value="8" selected>8명</option>
+        <option value="16">16명</option>
+        <option value="99">제한 없음</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="closeCreateRoomModal()" style="flex:1;background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;">취소</button>
+      <button onclick="confirmCreateRoom()" style="flex:2;" class="btn-yellow">✨ 방 만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 방 참가 모달 ══ -->
+<div id="joinRoomModal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,0.4);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:24px;padding:32px;width:420px;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:1.2rem;font-weight:800;color:var(--pink-dark);">🚪 방 참가하기</div>
+
+    <!-- 코드 직접 입력 -->
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="joinRoomCode" placeholder="방 코드 직접 입력..."
+        style="text-transform:uppercase;letter-spacing:2px;flex:1;"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+      <button onclick="joinByCode()" style="flex:0 0 auto;padding:7px 14px;">입장</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.78rem;">
+      <div style="flex:1;height:1px;background:var(--border);"></div>또는 목록에서 선택<div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+
+    <!-- 공개 방 목록 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.78rem;color:var(--text-muted);font-weight:700;">🌐 공개 방 목록</span>
+      <button onclick="loadRoomList()" style="font-size:0.72rem;padding:4px 10px;background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;">🔄 새로고침</button>
+    </div>
+    <div id="roomListContainer" style="display:flex;flex-direction:column;gap:8px;min-height:80px;">
+      <div style="text-align:center;color:var(--text-muted);font-size:0.84rem;padding:20px;">불러오는 중...</div>
+    </div>
+
+    <!-- 비번 입력 (필요시 표시) -->
+    <div id="joinPwSection" style="display:none;flex-direction:column;gap:8px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:700;">🔒 비밀번호를 입력해 주세요</label>
+      <div style="display:flex;gap:8px;">
+        <input type="password" id="joinRoomPw" placeholder="비밀번호..." style="flex:1;">
+        <button onclick="confirmJoinWithPw()" style="flex:0 0 auto;">입장</button>
+      </div>
+    </div>
+
+    <button onclick="closeJoinRoomModal()" style="background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;">닫기</button>
+  </div>
+</div>
+
+</body>
+</html>
