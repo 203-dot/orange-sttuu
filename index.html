@@ -2063,11 +2063,12 @@ window.onload = function() {
     updateMyIdentity();
     changeLanguage(currentLang);
     // 앱 시작 시 친구 신청 확인
-    if (typeof loadIncomingRequests === 'function') {
-        setTimeout(loadIncomingRequests, 1500);
-    }
+    setTimeout(function() {
+        if (typeof loadIncomingRequests === 'function') loadIncomingRequests();
+    }, 1500);
     // 오늘 누적 타이커 초기 표시
     updateTodayAccumDisplay();
+    loadStickerData(); // 저장된 스티커 복원
     renderFriendsUI();
     renderDday();
     renderStats();
@@ -2410,10 +2411,19 @@ function proceedConnect(code) {
         // 친구 신청 리스너
         loadIncomingRequests();
 
-        // 브라우저 닫힐 때 자동 퇴장
+        // ── onDisconnect: 비정상 종료 시 자동 유저 제거 (유령 유저 방지) ──
+        // 네트워크 단절, 탭 강제 종료 등 모든 상황에서 Firebase 서버가 자동 처리
+        var userRef = refDB.ref('studyclub/' + code + '/users/' + myId);
+        userRef.onDisconnect().remove();
+
+        // 정상 종료 시에도 명시적으로 제거
         window.addEventListener('beforeunload', function() {
             if (activeRoom && refDB) {
-                try { refDB.ref('studyclub/' + activeRoom + '/users/' + myId).remove(); } catch(e) {}
+                try {
+                    // onDisconnect 취소 후 직접 삭제 (더 빠름)
+                    userRef.onDisconnect().cancel();
+                    refDB.ref('studyclub/' + activeRoom + '/users/' + myId).remove();
+                } catch(e) {}
             }
         });
 
@@ -2464,58 +2474,54 @@ function drawUsers(users) {
     var countBadge = '<div style="font-size:0.78rem;color:var(--gui-dark-pink);text-align:right;margin-bottom:4px;flex-shrink:0;">👥 ' + keys.length + '명 접속 중</div>';
     list.innerHTML = countBadge;
 
-    for (var id in users) {
+    Object.keys(users).forEach(function(id) {
         var u = users[id];
         var isMe = (id === myId);
 
-        // 공부 시간 파싱 → 분 단위 계산
         var timeStr = u.time || '00:00:00';
-        var parts = timeStr.split(':');
+        var parts2  = timeStr.split(':');
         var totalMin = 0;
-        if (parts.length === 3) {
-            totalMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-        }
+        if (parts2.length === 3) totalMin = parseInt(parts2[0])*60 + parseInt(parts2[1]);
         var timeLabel = '';
         if (totalMin === 0) {
-            var sec = parseInt(parts[2] || 0);
-            timeLabel = sec > 0 ? sec + '초' : '방금 시작';
+            var sec = parseInt(parts2[2] || 0);
+            timeLabel = sec > 0 ? sec+'초' : '방금 시작';
         } else if (totalMin < 60) {
-            timeLabel = totalMin + '분 공부 중';
+            timeLabel = totalMin+'분 공부 중';
         } else {
-            var h = Math.floor(totalMin / 60);
-            var m = totalMin % 60;
-            timeLabel = h + '시간' + (m > 0 ? ' ' + m + '분' : '') + ' 공부 중';
+            var hh = Math.floor(totalMin/60), mm = totalMin%60;
+            timeLabel = hh+'시간'+(mm>0?' '+mm+'분':'')+' 공부 중';
         }
 
-        list.innerHTML +=
-            '<div class="user-card" data-uid="' + id + '" style="cursor:' + (isMe?'default':'pointer') + ';' + (isMe ? 'border-color:var(--pink);background:var(--pink-light);' : '') + '">' +
+        // DOM 방식으로 생성 → 이벤트 안정적 연결
+        var card = document.createElement('div');
+        card.className = 'user-card';
+        card.setAttribute('data-uid', id);
+        card.style.cssText = 'cursor:'+(isMe?'default':'pointer')+';'+(isMe?'border-color:var(--pink);background:var(--pink-light);':'');
+        card.innerHTML =
             '<div style="display:flex;align-items:center;gap:8px;">' +
             '<div style="position:relative;flex-shrink:0;">' +
-            '<img src="' + (u.img || fb) + '" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gui-pink);">' +
+            '<img src="'+(u.img||fb)+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gui-pink);">' +
             '<span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:#6bcb77;border-radius:50%;border:2px solid white;"></span>' +
             '</div>' +
             '<div style="flex:1;min-width:0;">' +
             '<div style="font-size:0.91rem;display:flex;align-items:center;gap:4px;">' +
-            u.name + (isMe ? ' <span style="font-size:0.65rem;background:var(--gui-dark-pink);color:white;padding:1px 5px;border-radius:5px;">나</span>' : '') +
+            u.name+(isMe?' <span style="font-size:0.65rem;background:var(--gui-dark-pink);color:white;padding:1px 5px;border-radius:5px;">나</span>':'')+
             '</div>' +
-            '<div style="font-size:0.72rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (u.subject || '공부 중') + '</div>' +
-            (u.status ? '<div style="font-size:0.7rem;color:var(--pink-dark);background:var(--pink-light);padding:1px 7px;border-radius:20px;display:inline-block;margin-top:2px;">' + u.status + '</div>' : '') +
-            '</div>' +
-            '</div>' +
-            '<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:4px;">' +
-            '<span style="font-size:0.70rem;color:#aaa;">⏱️</span>' +
-            '<span style="font-size:0.74rem;background:var(--text-main);color:#fff;padding:2px 9px;border-radius:6px;">' + timeStr + '</span>' +
-            '<span style="font-size:0.72rem;color:var(--gui-dark-pink);">(' + timeLabel + ')</span>' +
-            '</div>' +
+            '<div style="font-size:0.72rem;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(u.subject||'공부 중')+'</div>'+
+            (u.status?'<div style="font-size:0.7rem;color:var(--pink-dark);background:var(--pink-light);padding:1px 7px;border-radius:20px;display:inline-block;margin-top:2px;">'+u.status+'</div>':'')+
+            '</div></div>'+
+            '<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-top:4px;">'+
+            '<span style="font-size:0.70rem;color:#aaa;">⏱️</span>'+
+            '<span style="font-size:0.74rem;background:var(--text-main);color:#fff;padding:2px 9px;border-radius:6px;">'+timeStr+'</span>'+
+            '<span style="font-size:0.72rem;color:var(--gui-dark-pink);">('+timeLabel+')</span>'+
             '</div>';
-    }
-    // 각 카드에 클릭 이벤트 (나 제외)
-    list.querySelectorAll('.user-card[data-uid]').forEach(function(card) {
-        var uid = card.getAttribute('data-uid');
-        if (uid && uid !== myId) {
-            card.style.cursor = 'pointer';
-            card.onclick = function() { showMemberDetail(uid); };
+
+        // 클릭 이벤트 - 나 아닌 멤버만
+        if (!isMe) {
+            card.addEventListener('click', (function(uid){ return function(){ showMemberDetail(uid); }; })(id));
         }
+        list.appendChild(card);
     });
 }
 
@@ -2788,45 +2794,125 @@ function renderCurrentTab() {
 }
 
 // ══════════════════════════════════════════════
-//  친구
+//  친구 시스템 (Firebase 기반 수락/거절)
 // ══════════════════════════════════════════════
+
 function sendFriendRequest() {
     var input = document.getElementById('friendSearchInput');
+    if (!input) return;
     var tag = input.value.trim();
-    if (!tag.includes('#')) { alert("유저명#코드 형태로 입력해 주세요!"); return; }
-    if (!mySentRequests.includes(tag)) {
-        mySentRequests.push(tag);
-        localStorage.setItem('my_sent_requests', JSON.stringify(mySentRequests));
-        setTimeout(function() {
-            if (!myFriends.includes(tag)) {
-                myFriends.push(tag);
-                localStorage.setItem('my_friends_list', JSON.stringify(myFriends));
-                renderFriendsUI();
-            }
-        }, 1000);
+    if (!tag.includes('#')) { showToast('닉네임#코드 형태로 입력해 주세요!'); return; }
+    var myTag = myName + '#' + myId;
+    if (tag === myTag) { showToast('자기 자신에게는 신청할 수 없어요!'); return; }
+    var parts = tag.split('#');
+    var targetId = parts[parts.length - 1];
+    if (refDB) {
+        refDB.ref('friend_requests/' + targetId + '/' + myId).set({
+            from: myTag, fromName: myName, fromId: myId, t: Date.now()
+        });
+        showToast('📤 ' + tag + ' 님에게 친구 신청을 보냈어요!');
+    } else {
+        if (!mySentRequests.includes(tag)) {
+            mySentRequests.push(tag);
+            localStorage.setItem('my_sent_requests', JSON.stringify(mySentRequests));
+        }
+        showToast('📤 친구 신청 발송 (오프라인 모드)');
     }
-    alert("📥 ["+tag+"] 님에게 친구 요청을 발송했습니다.");
-    input.value = "";
+    input.value = '';
     renderFriendsUI();
 }
 
+function acceptFriend(fromTag, fromId) {
+    if (!myFriends.includes(fromTag)) {
+        myFriends.push(fromTag);
+        localStorage.setItem('my_friends_list', JSON.stringify(myFriends));
+    }
+    if (refDB) {
+        var myTag = myName + '#' + myId;
+        try { refDB.ref('friend_requests/' + myId + '/' + fromId).remove(); } catch(e) {}
+        try {
+            refDB.ref('friends/' + fromId + '/' + myId).set({ tag: myTag, name: myName, t: Date.now() });
+            refDB.ref('friends/' + myId + '/' + fromId).set({ tag: fromTag, name: fromTag.split('#')[0], t: Date.now() });
+        } catch(e) {}
+    }
+    showToast('🤝 ' + fromTag + ' 님과 친구가 됐어요!');
+    renderFriendsUI();
+    loadIncomingRequests();
+}
+
+function rejectFriend(fromId) {
+    if (refDB) {
+        try { refDB.ref('friend_requests/' + myId + '/' + fromId).remove(); } catch(e) {}
+    }
+    showToast('❌ 친구 신청을 거절했어요.');
+    loadIncomingRequests();
+}
+
+function removeFriend(tag) {
+    myFriends = myFriends.filter(function(f) { return f !== tag; });
+    localStorage.setItem('my_friends_list', JSON.stringify(myFriends));
+    renderFriendsUI();
+    showToast('친구 목록에서 삭제됐어요.');
+}
+
+function copyMyCode() {
+    var tag = myName + '#' + myId;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(tag).then(function() { showToast('📋 복사됨: ' + tag); });
+    } else { showToast('내 코드: ' + tag); }
+}
+
+function loadIncomingRequests() {
+    if (!refDB) return;
+    var iv    = document.getElementById('incomingRequestsView');
+    var badge = document.getElementById('incomingBadge');
+    if (!iv) return;
+    try {
+        refDB.ref('friend_requests/' + myId).on('value', function(s) {
+            if (!s.exists()) {
+                iv.innerHTML = '<span style="font-size:0.78rem;color:var(--text-muted);">없음</span>';
+                if (badge) badge.style.display = 'none';
+                return;
+            }
+            var reqs = [];
+            s.forEach(function(child) { reqs.push(child.val()); });
+            if (badge) { badge.innerText = reqs.length; badge.style.display = 'inline'; }
+            iv.innerHTML = '';
+            reqs.forEach(function(req) {
+                var div = document.createElement('div');
+                div.style.cssText = 'display:flex;align-items:center;gap:6px;padding:7px 8px;background:var(--pink-light);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px;';
+                div.innerHTML =
+                    '<span style="flex:1;font-size:0.84rem;font-weight:600;">👤 ' + (req.fromName||'?') + '</span>' +
+                    '<button onclick="acceptFriend(\'' + req.from + '\',\'' + req.fromId + '\')" style="font-size:0.72rem;padding:4px 10px;background:linear-gradient(135deg,#34d399,#059669);border:none;border-radius:8px;color:white;cursor:pointer;font-weight:700;">✓ 수락</button>' +
+                    '<button onclick="rejectFriend(\'' + req.fromId + '\')" style="font-size:0.72rem;padding:4px 8px;background:rgba(0,0,0,0.05);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text-muted);">✕</button>';
+                iv.appendChild(div);
+            });
+        });
+    } catch(e) {}
+}
+
 function renderFriendsUI() {
-    var sv = document.getElementById('sentRequestsView');
-    if (sv) { sv.innerText = mySentRequests.length === 0 ? (langPack[currentLang]||langPack.ko).txt_none : mySentRequests.join(', '); }
     var lv = document.getElementById('friendsListView');
     if (!lv) return;
-    lv.innerHTML = "";
+    lv.innerHTML = '';
+    var myTag = myName + '#' + myId;
     if (myFriends.length === 0) {
-        lv.innerHTML = '<span style="font-size:0.82rem;color:#bbb;">등록된 친구가 없습니다.</span>';
-    } else {
-        myFriends.forEach(function(f) {
-            lv.innerHTML +=
-                '<div onclick="startDM(\''+f+'\')" style="background:var(--gui-bubble);padding:6px 10px;border-radius:10px;border:1.5px solid var(--gui-pink);cursor:pointer;font-size:0.86rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
-                '<span>👤 '+f+'</span>' +
-                '<span style="font-size:0.72rem;background:var(--gui-dark-pink);color:white;padding:2px 7px;border-radius:6px;">💬 DM</span>' +
-                '</div>';
-        });
+        lv.innerHTML = '<div style="font-size:0.82rem;color:var(--text-muted);text-align:center;padding:8px;">등록된 친구가 없어요.</div><div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:4px;">내 코드: <b style="color:var(--pink-dark);">' + myTag + '</b> <span onclick="copyMyCode()" style="cursor:pointer;" title="복사">📋</span></div>';
+        return;
     }
+    myFriends.forEach(function(f) {
+        var div = document.createElement('div');
+        div.style.cssText = 'background:rgba(255,255,255,0.7);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+        div.innerHTML =
+            '<span style="flex:1;font-size:0.86rem;font-weight:600;">👤 ' + f + '</span>' +
+            '<button onclick="startDM(\'' + f + '\')" style="font-size:0.72rem;padding:4px 9px;border-radius:8px;background:linear-gradient(135deg,var(--pink),var(--pink-dark));color:white;border:none;cursor:pointer;">💬 DM</button>' +
+            '<button onclick="removeFriend(\'' + f + '\')" title="삭제" style="font-size:0.72rem;padding:4px 7px;border-radius:8px;background:none;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;">✕</button>';
+        lv.appendChild(div);
+    });
+    var myCodeEl = document.createElement('div');
+    myCodeEl.style.cssText = 'font-size:0.72rem;color:var(--text-muted);text-align:center;padding:6px;background:var(--pink-light);border-radius:var(--radius-sm);margin-top:4px;';
+    myCodeEl.innerHTML = '내 코드: <b style="color:var(--pink-dark);">' + myTag + '</b> <span onclick="copyMyCode()" style="cursor:pointer;" title="복사">📋</span>';
+    lv.appendChild(myCodeEl);
 }
 
 function startDM(tag) {
@@ -3925,11 +4011,24 @@ var _memberDetailData = {};
 function closeMemberDetail() { var m = document.getElementById('memberDetailModal'); if(m) m.remove(); }
 
 function showMemberDetail(uid) {
-    if (!activeRoom || !refDB) return;
+    // 캐시된 데이터 먼저 사용해서 즉시 표시
+    var cached = _memberDetailData[uid];
+    if (cached) _renderMemberModal(cached);
+
+    // Firebase에서 최신 데이터 가져오기
+    if (!activeRoom || !refDB) {
+        if (!cached) showToast('방에 입장한 후 이용해 주세요.');
+        return;
+    }
     refDB.ref('studyclub/'+activeRoom+'/users/'+uid).once('value', function(s) {
         if (!s.exists()) return;
         var u = s.val();
         _memberDetailData[uid] = u;
+        _renderMemberModal(u);
+    });
+}
+
+function _renderMemberModal(u) {
 
         var goalMin = Math.floor((u.goalSec||0)/60);
         var goalH   = Math.floor(goalMin/60);
@@ -3997,7 +4096,6 @@ function showMemberDetail(uid) {
             '<button onclick="closeMemberDetail()" style="width:100%;background:none;border:1px solid var(--border);color:var(--text-muted);box-shadow:none;">닫기</button>' +
             '</div>';
         modal.style.display = 'flex';
-    });
 }
 
 // ══════════════════════════════════════════════
@@ -4126,15 +4224,29 @@ function makeElementDraggable(el) {
         if (['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target.tagName)) return;
         bringToFront(el);
         p3=e.clientX; p4=e.clientY;
-        document.onmouseup = function(){ document.onmouseup=null; document.onmousemove=null; };
+        document.onmouseup = function(){
+            document.onmouseup = null;
+            document.onmousemove = null;
+        };
         document.onmousemove = function(e){
-            p1=p3-e.clientX; p2=p4-e.clientY; p3=e.clientX; p4=e.clientY;
-            // 화면 밖으로 나가지 않게 제한
-            var newTop  = Math.max(0, Math.min(window.innerHeight-40,  el.offsetTop-p2));
-            var newLeft = Math.max(0, Math.min(window.innerWidth-60, el.offsetLeft-p1));
+            p1 = p3 - e.clientX;
+            p2 = p4 - e.clientY;
+            p3 = e.clientX;
+            p4 = e.clientY;
+
+            var titleBarH = bar.offsetHeight || 38;
+            var winW      = el.offsetWidth  || 200;
+
+            // 클램프: 타이틀바가 항상 뷰포트 안에 남도록
+            var newTop  = Math.max(0,
+                          Math.min(window.innerHeight - titleBarH, el.offsetTop  - p2));
+            var newLeft = Math.max(-(winW - 80),   // 최소 80px은 화면에 남김
+                          Math.min(window.innerWidth - 80,        el.offsetLeft - p1));
+
             el.style.top  = newTop  + 'px';
             el.style.left = newLeft + 'px';
-            p3=e.clientX; p4=e.clientY;
+            p3 = e.clientX;
+            p4 = e.clientY;
         };
     };
 }
